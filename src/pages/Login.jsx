@@ -1,0 +1,100 @@
+import React, { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { loginUser } from '../utils/auth.js'
+
+export default function Login() {
+  const [remember, setRemember] = useState(false)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const navigate = useNavigate()
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    setError('')
+
+    // loginUser only ever reads/validates against the one stored object for
+    // this username — it never creates a new entry, so logging in repeatedly
+    // never duplicates the account.
+    const result = loginUser(username, password)
+
+    if (result.error) {
+      setError(result.error)
+      return
+    }
+    navigate('/')
+  }
+
+  return (
+    <div className="min-h-[calc(100vh-64px)] grid md:grid-cols-2">
+      <div className="hidden md:flex flex-col items-center justify-center bg-bg-soft p-12 relative overflow-hidden">
+        <div className="text-7xl mb-6">👨‍💻</div>
+        <h2 className="font-display font-bold text-2xl text-ink text-center max-w-sm">
+          Welcome back to the arena.
+        </h2>
+        <p className="text-ink-soft text-sm text-center max-w-xs mt-3">
+          Your streak, rank, and unfinished contests are waiting for you.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-center p-8">
+        <form onSubmit={handleSubmit} className="w-full max-w-sm">
+          <h1 className="font-display font-bold text-2xl text-ink mb-1">Log in</h1>
+          <p className="text-sm text-ink-soft mb-6">New to CodeArena? <Link to="/signup" className="text-accent font-medium hover:underline">Create an account</Link></p>
+
+          <div className="flex gap-3 mb-6">
+            <button type="button" className="flex-1 py-2.5 rounded-2xl border border-border text-sm font-medium hover:bg-bg-soft flex items-center justify-center gap-2">
+              <span>🔵</span> Google
+            </button>
+            <button type="button" className="flex-1 py-2.5 rounded-2xl border border-border text-sm font-medium hover:bg-bg-soft flex items-center justify-center gap-2">
+              <span>🐙</span> GitHub
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs text-ink-soft">OR</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          {error && (
+            <div className="px-4 py-2.5 rounded-2xl bg-danger/10 border border-danger/30 text-sm text-danger mb-4">
+              {error}
+            </div>
+          )}
+
+          <label className="text-xs font-semibold text-ink-soft block mb-1.5">Username</label>
+          <input
+            required
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="aarav_codes"
+            className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-accent-soft"
+          />
+
+          <label className="text-xs font-semibold text-ink-soft block mb-1.5">Password</label>
+          <input
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-accent-soft"
+          />
+
+          <div className="flex items-center justify-between mb-6 text-sm">
+            <label className="flex items-center gap-2 text-ink-soft">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="accent-accent" />
+              Remember me
+            </label>
+            <a href="#" className="text-accent font-medium hover:underline">Forgot password?</a>
+          </div>
+
+          <button type="submit" className="w-full py-3 rounded-2xl bg-accent text-white font-semibold hover:bg-accent-hover transition-colors shadow-lift">
+            Log In
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
