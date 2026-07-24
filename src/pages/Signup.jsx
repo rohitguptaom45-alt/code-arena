@@ -95,7 +95,7 @@ export default function Signup() {
               required
               value={form.fullName}
               onChange={update('fullName')}
-              placeholder="Rohit Gupta"
+              placeholder="Aarav Mehta"
               className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft"
             />
           </div>
@@ -105,7 +105,7 @@ export default function Signup() {
               required
               value={form.username}
               onChange={update('username')}
-              placeholder="rohit_codes"
+              placeholder="aarav_codes"
               className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft"
             />
           </div>
@@ -129,7 +129,7 @@ export default function Signup() {
             <input
               value={form.github}
               onChange={update('github')}
-              placeholder="rohit-Gupta"
+              placeholder="aarav-mehta"
               className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft"
             />
           </div>

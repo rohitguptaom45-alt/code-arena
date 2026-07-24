@@ -129,13 +129,226 @@ export const plans = [
 export const techLogos = ['React', 'Node.js', 'Java', 'Python', 'C++', 'MySQL', 'MongoDB', 'Git', 'Docker']
 
 export const developers = [
-  { name: 'Aarav Mehta', role: 'Founder & Full Stack Lead', skills: ['React', 'Node', 'AWS'], contributions: 812, exp: '5 yrs' },
-  { name: 'Isha Kapoor', role: 'Frontend Architect', skills: ['React', 'TypeScript', 'Design Systems'], contributions: 640, exp: '4 yrs' },
-  { name: 'Rohit Sinha', role: 'Backend Engineer', skills: ['Java', 'Spring', 'PostgreSQL'], contributions: 588, exp: '4 yrs' },
-  { name: 'Nandini Rao', role: 'DevOps & Infra', skills: ['Docker', 'Kubernetes', 'AWS'], contributions: 411, exp: '3 yrs' },
+  {
+    name: 'Rohit Gupta',
+    role: 'Founder & CEO',
+    qualification: 'B.Tech CSE, 3rd Year',
+    skills: ['React', 'Node.js', 'System Design'],
+    contributions: 412,
+    exp: '3rd Year Student',
+    bio: 'Started CodeArena in a hostel room to make competitive coding feel less lonely and more like an arena.',
+  },
+  {
+    name: 'Nagender Singh',
+    role: 'Co-Founder & CTO',
+    qualification: 'B.Tech CSE, 3rd Year',
+    skills: ['Java', 'System Architecture', 'DevOps'],
+    contributions: 389,
+    exp: '3rd Year Student',
+    bio: 'Owns everything under the hood — from the judge engine to keeping servers alive during contest spikes.',
+  },
+  {
+    name: 'Isha Kapoor',
+    role: 'Frontend Lead',
+    qualification: 'B.Tech IT, 3rd Year',
+    skills: ['React', 'TypeScript', 'Design Systems'],
+    contributions: 268,
+    exp: '3rd Year Student',
+    bio: 'Obsessed with making the editor feel fast and the UI feel like it was built by people who actually code.',
+  },
+  {
+    name: 'Aditya Verma',
+    role: 'Backend Engineer',
+    qualification: 'B.Tech CSE, 2nd Year',
+    skills: ['Python', 'PostgreSQL', 'Judge Systems'],
+    contributions: 201,
+    exp: '2nd Year Student',
+    bio: 'Builds and hardens the code execution sandbox that powers every submission on the platform.',
+  },
+]
+
+
+export const quizzes = [
+  {
+    id: 'js-basics-easy',
+    title: 'JavaScript Basics',
+    language: 'JavaScript',
+    difficulty: 'Easy',
+    questions: [
+      { q: 'Which keyword declares a block-scoped variable in JS?', options: ['var', 'let', 'define', 'global'], correct: 1 },
+      { q: 'What does `typeof "5"` return?', options: ['number', 'string', 'boolean', 'undefined'], correct: 1 },
+      { q: 'Which method adds an item to the end of an array?', options: ['push()', 'pop()', 'shift()', 'add()'], correct: 0 },
+      { q: 'What is the result of `2 + "2"` in JavaScript?', options: ['4', '"22"', 'NaN', 'Error'], correct: 1 },
+      { q: 'Which symbol is used for strict equality?', options: ['=', '==', '===', '!='], correct: 2 },
+    ],
+  },
+  {
+    id: 'js-arrays-medium',
+    title: 'Arrays & Loops in JS',
+    language: 'JavaScript',
+    difficulty: 'Medium',
+    questions: [
+      { q: 'Which array method returns a new array with transformed elements?', options: ['forEach()', 'map()', 'filter()', 'reduce()'], correct: 1 },
+      { q: 'What does `[1,2,3].filter(n => n > 1)` return?', options: ['[1]', '[2,3]', '[1,2,3]', '[]'], correct: 1 },
+      { q: 'Which loop is best for iterating with early exit via break?', options: ['forEach', 'for', 'map', 'filter'], correct: 1 },
+      { q: 'What does `Array.isArray([])` return?', options: ['true', 'false', 'undefined', 'Error'], correct: 0 },
+      { q: '`[1,2,3].reduce((a,b) => a+b, 0)` evaluates to?', options: ['3', '6', '[1,2,3]', 'undefined'], correct: 1 },
+    ],
+  },
+  {
+    id: 'python-basics-easy',
+    title: 'Python Basics',
+    language: 'Python',
+    difficulty: 'Easy',
+    questions: [
+      { q: 'How do you start a comment in Python?', options: ['//', '#', '/* */', '--'], correct: 1 },
+      { q: 'Which data type is immutable in Python?', options: ['list', 'dict', 'tuple', 'set'], correct: 2 },
+      { q: 'What does `len("hello")` return?', options: ['4', '5', '6', 'Error'], correct: 1 },
+      { q: 'Which keyword defines a function?', options: ['func', 'def', 'function', 'lambda'], correct: 1 },
+      { q: 'What is the output of `print(3 // 2)`?', options: ['1.5', '1', '2', 'Error'], correct: 1 },
+    ],
+  },
+  {
+    id: 'python-ds-hard',
+    title: 'Python Data Structures',
+    language: 'Python',
+    difficulty: 'Hard',
+    questions: [
+      { q: 'What is the time complexity of dict lookups on average?', options: ['O(n)', 'O(log n)', 'O(1)', 'O(n^2)'], correct: 2 },
+      { q: 'Which structure would you use for FIFO behaviour?', options: ['list.append/pop', 'collections.deque', 'set', 'tuple'], correct: 1 },
+      { q: 'What does a list comprehension `[x*x for x in range(5) if x % 2 == 0]` produce?', options: ['[0,4,16]', '[0,1,4,9,16]', '[1,9]', '[0,2,4]'], correct: 0 },
+      { q: 'Which module gives you `Counter` and `defaultdict`?', options: ['itertools', 'functools', 'collections', 'heapq'], correct: 2 },
+      { q: 'What does `heapq.heappush` maintain?', options: ['A sorted list', 'A min-heap', 'A max-heap', 'A balanced BST'], correct: 1 },
+    ],
+  },
+  {
+    id: 'java-oop-medium',
+    title: 'Java OOP Concepts',
+    language: 'Java',
+    difficulty: 'Medium',
+    questions: [
+      { q: 'Which keyword is used to inherit a class in Java?', options: ['implements', 'extends', 'inherits', 'super'], correct: 1 },
+      { q: 'What does encapsulation primarily achieve?', options: ['Faster loops', 'Data hiding', 'Multiple inheritance', 'Memory allocation'], correct: 1 },
+      { q: 'Which keyword prevents a class from being subclassed?', options: ['static', 'private', 'final', 'const'], correct: 2 },
+      { q: 'An interface method (default Java 8+) can have a body if marked with?', options: ['abstract', 'default', 'static final', 'virtual'], correct: 1 },
+      { q: 'What is method overriding an example of?', options: ['Compile-time polymorphism', 'Runtime polymorphism', 'Encapsulation', 'Abstraction'], correct: 1 },
+    ],
+  },
+  {
+    id: 'cpp-pointers-hard',
+    title: 'C++ Pointers & Memory',
+    language: 'C++',
+    difficulty: 'Hard',
+    questions: [
+      { q: 'What does `new` do in C++?', options: ['Stack allocation', 'Heap allocation', 'Deletes memory', 'Nothing'], correct: 1 },
+      { q: 'What happens if you forget to `delete` heap memory?', options: ['Compile error', 'Memory leak', 'Segfault always', 'Nothing, GC handles it'], correct: 1 },
+      { q: 'What does a dangling pointer point to?', options: ['Valid new memory', 'Freed/invalid memory', 'A function', 'Nothing, it errors immediately'], correct: 1 },
+      { q: 'Which smart pointer allows only one owner?', options: ['shared_ptr', 'unique_ptr', 'weak_ptr', 'raw_ptr'], correct: 1 },
+      { q: 'What does `*ptr` do when `ptr` is a pointer?', options: ['Gets the address', 'Dereferences to the value', 'Deletes the pointer', 'Increments it'], correct: 1 },
+    ],
+  },
 ]
 
 export const currentUser = { id: 'me', username: 'you.codes', avatarColor: 'bg-accent' }
+
+export const tutorials = {
+  javascript: {
+    label: 'JavaScript',
+    icon: '🟨',
+    lessons: [
+      {
+        title: 'Variables & Data Types',
+        body: 'JavaScript has three ways to declare variables: var, let, and const. Prefer let and const — they are block-scoped, which avoids a lot of classic bugs. const means the binding cannot be reassigned, not that the value is frozen.',
+        code: `let age = 21;\nconst name = "CodeArena";\nlet isActive = true;\n\nconsole.log(\`\${name} user, age \${age}\`);`,
+      },
+      {
+        title: 'Functions & Arrow Functions',
+        body: 'Functions can be declared normally or as arrow functions. Arrow functions have a shorter syntax and do not bind their own `this`, which makes them useful inside callbacks.',
+        code: `function add(a, b) {\n  return a + b;\n}\n\nconst multiply = (a, b) => a * b;\n\nconsole.log(add(2, 3), multiply(2, 3));`,
+      },
+      {
+        title: 'Arrays & Loops',
+        body: 'Arrays come with powerful built-in methods like map, filter, and reduce that let you transform data without writing manual loops.',
+        code: `const nums = [1, 2, 3, 4, 5];\nconst doubled = nums.map(n => n * 2);\nconst evens = nums.filter(n => n % 2 === 0);\n\nconsole.log(doubled, evens);`,
+      },
+      {
+        title: 'ES6+ Features',
+        body: 'Destructuring, spread/rest operators, and template literals make modern JavaScript far more concise than older syntax.',
+        code: `const user = { name: "Aarav", rank: 4 };\nconst { name, rank } = user;\nconst combined = [...[1,2], ...[3,4]];\n\nconsole.log(name, rank, combined);`,
+      },
+    ],
+  },
+  python: {
+    label: 'Python',
+    icon: '🐍',
+    lessons: [
+      {
+        title: 'Basics & Syntax',
+        body: 'Python uses indentation instead of curly braces to define code blocks. Variables do not need explicit type declarations.',
+        code: `name = "CodeArena"\nage = 21\nis_active = True\n\nprint(f"{name} user, age {age}")`,
+      },
+      {
+        title: 'Data Structures',
+        body: 'Python has four built-in collection types: list (ordered, mutable), tuple (ordered, immutable), set (unordered, unique), and dict (key-value pairs).',
+        code: `nums = [1, 2, 3, 4, 5]\nsquares = [n * n for n in nums]\nuser = {"name": "Aarav", "rank": 4}\n\nprint(squares, user["rank"])`,
+      },
+      {
+        title: 'Functions & Modules',
+        body: 'Functions are defined with `def`. Python also lets you import modules to reuse code across files.',
+        code: `def greet(name, rank=0):\n    return f"Hello {name}, rank #{rank}"\n\nprint(greet("Aarav", 4))`,
+      },
+      {
+        title: 'OOP in Python',
+        body: 'Classes bundle data and behavior together. `self` refers to the current instance, similar to `this` in other languages.',
+        code: `class Coder:\n    def __init__(self, name, rank):\n        self.name = name\n        self.rank = rank\n\n    def intro(self):\n        return f"{self.name} is rank #{self.rank}"\n\nprint(Coder("Aarav", 4).intro())`,
+      },
+    ],
+  },
+  java: {
+    label: 'Java',
+    icon: '☕',
+    lessons: [
+      {
+        title: 'Basics & OOP',
+        body: 'Java is statically typed and everything lives inside a class. Every program needs a `main` method as its entry point.',
+        code: `public class Main {\n  public static void main(String[] args) {\n    String name = "CodeArena";\n    int rank = 4;\n    System.out.println(name + " rank " + rank);\n  }\n}`,
+      },
+      {
+        title: 'Collections',
+        body: 'The Java Collections Framework provides List, Set, and Map implementations like ArrayList, HashSet, and HashMap.',
+        code: `List<Integer> nums = new ArrayList<>(List.of(1, 2, 3));\nMap<String, Integer> ranks = new HashMap<>();\nranks.put("Aarav", 4);\n\nSystem.out.println(nums);\nSystem.out.println(ranks);`,
+      },
+      {
+        title: 'Exception Handling',
+        body: 'Java uses try/catch/finally blocks to handle runtime errors gracefully instead of crashing the program.',
+        code: `try {\n  int result = 10 / 0;\n} catch (ArithmeticException e) {\n  System.out.println("Cannot divide by zero: " + e.getMessage());\n} finally {\n  System.out.println("Done");\n}`,
+      },
+    ],
+  },
+  cpp: {
+    label: 'C++',
+    icon: '🔷',
+    lessons: [
+      {
+        title: 'Basics & Pointers',
+        body: 'C++ gives you direct memory control through pointers. A pointer stores the address of another variable.',
+        code: `#include <iostream>\nusing namespace std;\n\nint main() {\n  int rank = 4;\n  int* ptr = &rank;\n  cout << "Rank: " << *ptr << endl;\n  return 0;\n}`,
+      },
+      {
+        title: 'STL Containers',
+        body: 'The Standard Template Library provides ready-made containers like vector, map, and set with efficient built-in operations.',
+        code: `#include <vector>\n#include <iostream>\nusing namespace std;\n\nint main() {\n  vector<int> nums = {1, 2, 3, 4};\n  for (int n : nums) cout << n << " ";\n  return 0;\n}`,
+      },
+      {
+        title: 'OOP in C++',
+        body: 'C++ supports classes, inheritance, and polymorphism, giving you both low-level control and high-level abstractions.',
+        code: `class Coder {\npublic:\n  string name;\n  int rank;\n  Coder(string n, int r) : name(n), rank(r) {}\n  void intro() { cout << name << " is rank #" << rank; }\n};`,
+      },
+    ],
+  },
+}
+
+
 
 export const directMessages = [
   {

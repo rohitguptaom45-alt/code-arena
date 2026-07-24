@@ -71,7 +71,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
             {moreOpen && (
               <div className="absolute top-full mt-2 left-0 w-48 bg-white border border-border rounded-2xl shadow-lift p-2">
                 {[
-                  { label: 'Code Editor (Demo)', to: '/editor' },
+                  { label: 'Code Editor, Quizzes & Tutorials', to: '/editor' },
                   { label: 'Developers', to: '/developers' },
                   { label: 'Settings', to: '/settings' },
                   { label: 'About Us', to: '/more' },

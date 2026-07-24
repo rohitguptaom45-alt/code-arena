@@ -2,21 +2,60 @@ import React from 'react'
 import { developers, techLogos } from '../data/mockData.js'
 
 export default function Developers() {
+  const leads = developers.slice(0, 2)
+  const team = developers.slice(2)
+
   return (
     <div className="max-w-6xl mx-auto px-5 py-14">
       <div className="text-center mb-12">
         <h1 className="font-display font-bold text-3xl text-ink">Meet Our Developers</h1>
-        <p className="text-ink-soft mt-2 text-sm">The team building CodeArena, one commit at a time.</p>
+        <p className="text-ink-soft mt-2 text-sm">
+          The (mostly still-in-college) team building CodeArena, one commit at a time.
+        </p>
       </div>
 
+      {/* Founders */}
+      <div className="grid md:grid-cols-2 gap-6 mb-10">
+        {leads.map((dev) => (
+          <div key={dev.name} className="card-lift bg-white border border-border rounded-2xl p-7">
+            <div className="flex items-start gap-4">
+              <div className="w-16 h-16 shrink-0 rounded-full bg-accent-soft text-white grid place-items-center text-2xl font-semibold">
+                {dev.name[0]}
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-lg text-ink">{dev.name}</h3>
+                <p className="text-sm text-accent font-medium">{dev.role}</p>
+                <p className="text-xs text-ink-soft mt-0.5">{dev.qualification}</p>
+              </div>
+            </div>
+            <p className="text-sm text-ink-soft mt-4 leading-relaxed">{dev.bio}</p>
+            <div className="flex flex-wrap gap-1.5 mt-4 mb-4">
+              {dev.skills.map((s) => (
+                <span key={s} className="px-2.5 py-1 rounded-full bg-muted text-xs text-ink-soft">{s}</span>
+              ))}
+            </div>
+            <div className="flex items-center justify-between text-xs text-ink-soft border-t border-border pt-3">
+              <span>{dev.contributions} commits</span>
+              <div className="flex gap-3 text-sm">
+                <a href="#" className="hover:text-accent">🐙</a>
+                <a href="#" className="hover:text-accent">💼</a>
+                <a href="#" className="hover:text-accent">🌐</a>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Rest of the team */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-        {developers.map((dev) => (
+        {team.map((dev) => (
           <div key={dev.name} className="card-lift bg-white border border-border rounded-2xl p-6 text-center">
             <div className="w-16 h-16 mx-auto rounded-full bg-bg-soft grid place-items-center text-2xl mb-3">
               {dev.name[0]}
             </div>
             <h3 className="font-display font-semibold text-ink">{dev.name}</h3>
-            <p className="text-xs text-accent font-medium mb-2">{dev.role}</p>
+            <p className="text-xs text-accent font-medium mb-1">{dev.role}</p>
+            <p className="text-[11px] text-ink-soft mb-2">{dev.qualification}</p>
             <div className="flex flex-wrap justify-center gap-1.5 mb-3">
               {dev.skills.map((s) => (
                 <span key={s} className="px-2 py-0.5 rounded-full bg-muted text-xs text-ink-soft">{s}</span>
@@ -24,7 +63,6 @@ export default function Developers() {
             </div>
             <div className="flex justify-center gap-4 text-xs text-ink-soft mb-3">
               <span>{dev.contributions} commits</span>
-              <span>{dev.exp}</span>
             </div>
             <div className="flex justify-center gap-3 text-sm">
               <a href="#" className="hover:text-accent">🐙</a>
@@ -46,21 +84,21 @@ export default function Developers() {
 
       <div className="grid grid-cols-3 gap-6 mb-16 text-center">
         <div>
-          <div className="font-display font-extrabold text-2xl text-accent">2,451</div>
+          <div className="font-display font-extrabold text-2xl text-accent">1,270</div>
           <div className="text-xs text-ink-soft">Commits this year</div>
         </div>
         <div>
-          <div className="font-display font-extrabold text-2xl text-accent">38</div>
+          <div className="font-display font-extrabold text-2xl text-accent">12</div>
           <div className="text-xs text-ink-soft">Open-source contributors</div>
         </div>
         <div>
-          <div className="font-display font-extrabold text-2xl text-accent">126</div>
+          <div className="font-display font-extrabold text-2xl text-accent">34</div>
           <div className="text-xs text-ink-soft">Releases shipped</div>
         </div>
       </div>
 
       <p className="text-center text-ink-soft text-sm">
-        Built with ❤️ by passionate developers to empower every coder.
+        Built with ❤️ (and a lot of late-night debugging) by students who wanted a better arena.
       </p>
     </div>
   )
