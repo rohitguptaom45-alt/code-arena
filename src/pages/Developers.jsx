@@ -14,7 +14,6 @@ export default function Developers() {
         </p>
       </div>
 
-      {/* Founders */}
       <div className="grid md:grid-cols-2 gap-6 mb-10">
         {leads.map((dev) => (
           <div key={dev.name} className="card-lift bg-white border border-border rounded-2xl p-7">
@@ -46,7 +45,6 @@ export default function Developers() {
         ))}
       </div>
 
-      {/* Rest of the team */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
         {team.map((dev) => (
           <div key={dev.name} className="card-lift bg-white border border-border rounded-2xl p-6 text-center">

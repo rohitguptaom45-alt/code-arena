@@ -16,7 +16,7 @@ function initials(name) {
 }
 
 export default function Chat() {
-  const [mode, setMode] = useState('direct') // 'direct' | 'community'
+  const [mode, setMode] = useState('direct')
   const [dms, setDms] = useState(initialDirectMessages)
   const [channels, setChannels] = useState(initialCommunityChannels)
   const [activeDmId, setActiveDmId] = useState(initialDirectMessages[0]?.id ?? null)
@@ -101,7 +101,6 @@ export default function Chat() {
       </div>
 
       <div className="sm:border sm:border-border sm:rounded-2xl overflow-hidden bg-white flex h-[calc(100vh-64px)] sm:h-[640px]">
-        {/* Sidebar */}
         <aside
           className={`w-full sm:w-80 shrink-0 border-r border-border flex flex-col ${
             mobileShowThread ? 'hidden sm:flex' : 'flex'
@@ -199,7 +198,6 @@ export default function Chat() {
           </div>
         </aside>
 
-        {/* Thread */}
         <section className={`flex-1 min-w-0 flex-col ${mobileShowThread ? 'flex' : 'hidden sm:flex'}`}>
           {activeThread ? (
             <>

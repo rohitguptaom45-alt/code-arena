@@ -1,8 +1,3 @@
-// Simple localStorage-backed auth for demo purposes.
-// Users are stored as an OBJECT keyed by username, e.g. { "aarav_codes": {...} }
-// so registering/logging in with the same username never creates a duplicate
-// entry — it always reads/writes the single existing object for that user.
-
 const USERS_KEY = 'codearena_users'
 const SESSION_KEY = 'codearena_session'
 
@@ -25,14 +20,6 @@ function writeUsers(users) {
   localStorage.setItem(USERS_KEY, JSON.stringify(users))
 }
 
-function notifyAuthChange() {
-  window.dispatchEvent(new Event('codearena-auth-change'))
-}
-
-/**
- * Create a new user. Fails if the username is already taken, so repeated
- * sign-ups / logins never append a second object for the same person.
- */
 export function registerUser({ username, password, fullName, avatar, bio, type, github }) {
   const users = readUsers()
   const key = username.trim().toLowerCase()
@@ -46,7 +33,7 @@ export function registerUser({ username, password, fullName, avatar, bio, type, 
 
   const user = {
     username: key,
-    password, // demo-only: plaintext storage is NOT secure, fine for a mock app
+    password,
     fullName: fullName?.trim() || key,
     avatar: avatar || AVATAR_OPTIONS[0],
     bio: bio?.trim() || '',
@@ -58,14 +45,9 @@ export function registerUser({ username, password, fullName, avatar, bio, type, 
   users[key] = user
   writeUsers(users)
   localStorage.setItem(SESSION_KEY, key)
-  notifyAuthChange()
   return { user }
 }
 
-/**
- * Authenticate against the single stored object for this username.
- * Never creates or duplicates a user record — only reads and checks it.
- */
 export function loginUser(username, password) {
   const users = readUsers()
   const key = username.trim().toLowerCase()
@@ -79,25 +61,21 @@ export function loginUser(username, password) {
   }
 
   localStorage.setItem(SESSION_KEY, key)
-  notifyAuthChange()
   return { user }
 }
 
-/** Update fields on the currently stored user object (e.g. from Settings). */
-export function updateUser(username, updates) {
+export function updateStoredUser(username, updates) {
   const users = readUsers()
   const key = username.trim().toLowerCase()
   if (!users[key]) return { error: 'User not found.' }
 
   users[key] = { ...users[key], ...updates, username: key }
   writeUsers(users)
-  notifyAuthChange()
   return { user: users[key] }
 }
 
 export function logoutUser() {
   localStorage.removeItem(SESSION_KEY)
-  notifyAuthChange()
 }
 
 export function getCurrentUser() {

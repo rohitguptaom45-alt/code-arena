@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import { loginUser } from '../utils/auth.js'
+import { setUser } from '../store/authSlice.js'
 
 export default function Login() {
   const [remember, setRemember] = useState(false)
@@ -8,20 +10,19 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const dispatch = useDispatch()
 
   const handleSubmit = (e) => {
     e.preventDefault()
     setError('')
 
-    // loginUser only ever reads/validates against the one stored object for
-    // this username — it never creates a new entry, so logging in repeatedly
-    // never duplicates the account.
     const result = loginUser(username, password)
 
     if (result.error) {
       setError(result.error)
       return
     }
+    dispatch(setUser(result.user))
     navigate('/')
   }
 
@@ -68,7 +69,7 @@ export default function Login() {
             required
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="aarav_codes"
+            placeholder="rohit_gupta"
             className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-accent-soft"
           />
 

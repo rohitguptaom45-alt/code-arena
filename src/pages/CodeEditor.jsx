@@ -35,10 +35,6 @@ export default function CodeEditor() {
   )
 }
 
-/* ---------------------------------------------------------------------- */
-/* Compiler                                                                */
-/* ---------------------------------------------------------------------- */
-
 const languages = [
   { id: 'javascript', label: 'JavaScript' },
   { id: 'python', label: 'Python' },
@@ -58,22 +54,6 @@ const hints = [
   'You only need a single pass through the array.',
 ]
 
-/**
- * REAL execution: JavaScript runs directly in the browser sandbox below by
- * capturing console.log output from a scoped Function() call.
- *
- * SIMULATED execution: Python / Java / C++ cannot be compiled inside a
- * browser artifact — there is no JVM, GCC, or CPython runtime available
- * client-side. In a production build, swap `simulateRun()` below for a real
- * call to a judge service, e.g.:
- *
- *   await fetch('https://api.judge0.com/submissions', {
- *     method: 'POST',
- *     body: JSON.stringify({ source_code, language_id, stdin }),
- *   })
- *
- * Judge0, Piston, or a custom Docker-based sandbox are the standard choices.
- */
 function runJavaScript(code) {
   const logs = []
   const fakeConsole = { log: (...args) => logs.push(args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ')) }
@@ -138,7 +118,6 @@ function CompilerView() {
   return (
     <div className={theme === 'dark' ? 'bg-ink' : 'bg-white'}>
       <div className="max-w-[1400px] mx-auto grid lg:grid-cols-[1.1fr_1.4fr_0.9fr] gap-0 min-h-[calc(100vh-112px)]">
-        {/* Problem panel */}
         <div className={`border-r border-border p-6 overflow-y-auto ${theme === 'dark' ? 'text-white/80' : 'text-ink-soft'}`}>
           <div className="flex items-center justify-between mb-4">
             <span className="px-2.5 py-1 rounded-full bg-warning/10 text-warning text-xs font-semibold">Medium</span>
@@ -174,7 +153,6 @@ function CompilerView() {
           </div>
         </div>
 
-        {/* Editor panel */}
         <div className="border-r border-border flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-bg-soft">
             <select
@@ -217,7 +195,6 @@ function CompilerView() {
           </div>
         </div>
 
-        {/* Console / sidebar panel */}
         <div className="flex flex-col">
           <div className="flex border-b border-border">
             {['console', 'input', 'leaderboard'].map((t) => (
@@ -261,10 +238,6 @@ function CompilerView() {
     </div>
   )
 }
-
-/* ---------------------------------------------------------------------- */
-/* Quizzes                                                                 */
-/* ---------------------------------------------------------------------- */
 
 const difficultyStyles = {
   Easy: 'bg-success/10 text-success',
@@ -438,10 +411,6 @@ function QuizRunner({ quiz, onExit }) {
     </div>
   )
 }
-
-/* ---------------------------------------------------------------------- */
-/* Tutorials                                                               */
-/* ---------------------------------------------------------------------- */
 
 function TutorialsView() {
   const langKeys = Object.keys(tutorials)

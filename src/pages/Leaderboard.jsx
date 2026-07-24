@@ -8,7 +8,7 @@ export default function Leaderboard() {
   const [tab, setTab] = useState('Weekly')
   const top3 = leaderboard.slice(0, 3)
   const rest = leaderboard.slice(3)
-  const podiumOrder = [top3[1], top3[0], top3[2]] // 2nd, 1st, 3rd for visual podium
+  const podiumOrder = [top3[1], top3[0], top3[2]]
   const podiumHeight = ['h-28', 'h-40', 'h-24']
 
   return (
@@ -33,7 +33,6 @@ export default function Leaderboard() {
         </div>
       </div>
 
-      {/* Podium */}
       <div className="grid grid-cols-3 gap-4 items-end mb-14 max-w-xl mx-auto">
         {podiumOrder.map((user, i) => (
           <div key={user.username} className="text-center animate-[fadeUp_.5s_ease]">
@@ -49,7 +48,6 @@ export default function Leaderboard() {
         <style>{`@keyframes fadeUp { from { opacity:0; transform: translateY(12px);} to { opacity:1; transform: translateY(0);} }`}</style>
       </div>
 
-      {/* Table */}
       <div className="border border-border rounded-2xl overflow-hidden">
         <div className="grid grid-cols-[50px_1fr_70px_80px_70px_60px] md:grid-cols-[60px_1fr_90px_120px_110px_100px] gap-2 px-5 py-3 bg-bg-soft text-xs font-semibold text-ink-soft">
           <span>Rank</span>

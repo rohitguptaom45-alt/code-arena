@@ -29,7 +29,6 @@ export default function More() {
         </p>
       </div>
 
-      {/* Mission / Vision / Journey */}
       <section className="bg-bg-soft rounded-2xl p-8 grid md:grid-cols-3 gap-8 mb-16">
         <div>
           <div className="text-2xl mb-2">🎯</div>
@@ -48,7 +47,6 @@ export default function More() {
         </div>
       </section>
 
-      {/* Founders */}
       <section className="mb-16">
         <h2 className="font-display font-bold text-xl text-ink mb-6 text-center">The Founders</h2>
         <div className="grid md:grid-cols-2 gap-6">
@@ -71,7 +69,6 @@ export default function More() {
         </p>
       </section>
 
-      {/* Timeline */}
       <section className="mb-16">
         <h2 className="font-display font-bold text-xl text-ink mb-6 text-center">How We Got Here</h2>
         <div className="space-y-5">
@@ -90,7 +87,6 @@ export default function More() {
         </div>
       </section>
 
-      {/* Support / links */}
       <section>
         <h2 className="font-display font-bold text-xl text-ink mb-6 text-center">More From CodeArena</h2>
         <div className="grid md:grid-cols-3 gap-8">

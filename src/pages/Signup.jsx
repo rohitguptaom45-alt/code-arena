@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import { registerUser, getAvatarOptions } from '../utils/auth.js'
+import { setUser } from '../store/authSlice.js'
 
 const accountTypes = ['Student', 'Professional', 'Freelancer', 'Recruiter']
 
@@ -18,6 +20,7 @@ export default function Signup() {
   })
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const dispatch = useDispatch()
 
   const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
 
@@ -41,6 +44,7 @@ export default function Signup() {
       setError(result.error)
       return
     }
+    dispatch(setUser(result.user))
     navigate('/')
   }
 
@@ -95,7 +99,7 @@ export default function Signup() {
               required
               value={form.fullName}
               onChange={update('fullName')}
-              placeholder="Aarav Mehta"
+              placeholder="Rohit Gupta"
               className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft"
             />
           </div>
@@ -105,7 +109,7 @@ export default function Signup() {
               required
               value={form.username}
               onChange={update('username')}
-              placeholder="aarav_codes"
+              placeholder="rohit_gupta"
               className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft"
             />
           </div>
@@ -129,7 +133,7 @@ export default function Signup() {
             <input
               value={form.github}
               onChange={update('github')}
-              placeholder="aarav-mehta"
+              placeholder="rohit-gupta"
               className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft"
             />
           </div>

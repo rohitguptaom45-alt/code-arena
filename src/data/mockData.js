@@ -274,7 +274,7 @@ export const tutorials = {
       {
         title: 'ES6+ Features',
         body: 'Destructuring, spread/rest operators, and template literals make modern JavaScript far more concise than older syntax.',
-        code: `const user = { name: "Aarav", rank: 4 };\nconst { name, rank } = user;\nconst combined = [...[1,2], ...[3,4]];\n\nconsole.log(name, rank, combined);`,
+        code: `const user = { name: "Rohit", rank: 4 };\nconst { name, rank } = user;\nconst combined = [...[1,2], ...[3,4]];\n\nconsole.log(name, rank, combined);`,
       },
     ],
   },
@@ -290,17 +290,17 @@ export const tutorials = {
       {
         title: 'Data Structures',
         body: 'Python has four built-in collection types: list (ordered, mutable), tuple (ordered, immutable), set (unordered, unique), and dict (key-value pairs).',
-        code: `nums = [1, 2, 3, 4, 5]\nsquares = [n * n for n in nums]\nuser = {"name": "Aarav", "rank": 4}\n\nprint(squares, user["rank"])`,
+        code: `nums = [1, 2, 3, 4, 5]\nsquares = [n * n for n in nums]\nuser = {"name": "Rohit", "rank": 4}\n\nprint(squares, user["rank"])`,
       },
       {
         title: 'Functions & Modules',
         body: 'Functions are defined with `def`. Python also lets you import modules to reuse code across files.',
-        code: `def greet(name, rank=0):\n    return f"Hello {name}, rank #{rank}"\n\nprint(greet("Aarav", 4))`,
+        code: `def greet(name, rank=0):\n    return f"Hello {name}, rank #{rank}"\n\nprint(greet("Rohit", 4))`,
       },
       {
         title: 'OOP in Python',
         body: 'Classes bundle data and behavior together. `self` refers to the current instance, similar to `this` in other languages.',
-        code: `class Coder:\n    def __init__(self, name, rank):\n        self.name = name\n        self.rank = rank\n\n    def intro(self):\n        return f"{self.name} is rank #{self.rank}"\n\nprint(Coder("Aarav", 4).intro())`,
+        code: `class Coder:\n    def __init__(self, name, rank):\n        self.name = name\n        self.rank = rank\n\n    def intro(self):\n        return f"{self.name} is rank #{self.rank}"\n\nprint(Coder("Rohit", 4).intro())`,
       },
     ],
   },
@@ -316,7 +316,7 @@ export const tutorials = {
       {
         title: 'Collections',
         body: 'The Java Collections Framework provides List, Set, and Map implementations like ArrayList, HashSet, and HashMap.',
-        code: `List<Integer> nums = new ArrayList<>(List.of(1, 2, 3));\nMap<String, Integer> ranks = new HashMap<>();\nranks.put("Aarav", 4);\n\nSystem.out.println(nums);\nSystem.out.println(ranks);`,
+        code: `List<Integer> nums = new ArrayList<>(List.of(1, 2, 3));\nMap<String, Integer> ranks = new HashMap<>();\nranks.put("Rohit", 4);\n\nSystem.out.println(nums);\nSystem.out.println(ranks);`,
       },
       {
         title: 'Exception Handling',
@@ -472,8 +472,8 @@ export function getCommunityAutoReply() {
 }
 
 export const languageStarters = {
-  javascript: `// Two Sum\nfunction twoSum(nums, target) {\n  const seen = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const need = target - nums[i];\n    if (seen.has(need)) return [seen.get(need), i];\n    seen.set(nums[i], i);\n  }\n  return [];\n}\n\nconsole.log(twoSum([2, 7, 11, 15], 9));`,
-  python: `# Two Sum\ndef two_sum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        need = target - n\n        if need in seen:\n            return [seen[need], i]\n        seen[n] = i\n    return []\n\nprint(two_sum([2, 7, 11, 15], 9))`,
+  javascript: `function twoSum(nums, target) {\n  const seen = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const need = target - nums[i];\n    if (seen.has(need)) return [seen.get(need), i];\n    seen.set(nums[i], i);\n  }\n  return [];\n}\n\nconsole.log(twoSum([2, 7, 11, 15], 9));`,
+  python: `def two_sum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        need = target - n\n        if need in seen:\n            return [seen[need], i]\n        seen[n] = i\n    return []\n\nprint(two_sum([2, 7, 11, 15], 9))`,
   java: `import java.util.*;\n\nclass Solution {\n    public static int[] twoSum(int[] nums, int target) {\n        Map<Integer, Integer> seen = new HashMap<>();\n        for (int i = 0; i < nums.length; i++) {\n            int need = target - nums[i];\n            if (seen.containsKey(need)) return new int[]{seen.get(need), i};\n            seen.put(nums[i], i);\n        }\n        return new int[]{};\n    }\n\n    public static void main(String[] args) {\n        System.out.println(Arrays.toString(twoSum(new int[]{2,7,11,15}, 9)));\n    }\n}`,
   cpp: `#include <bits/stdc++.h>\nusing namespace std;\n\nvector<int> twoSum(vector<int>& nums, int target) {\n    unordered_map<int, int> seen;\n    for (int i = 0; i < nums.size(); i++) {\n        int need = target - nums[i];\n        if (seen.count(need)) return {seen[need], i};\n        seen[nums[i]] = i;\n    }\n    return {};\n}\n\nint main() {\n    vector<int> nums = {2, 7, 11, 15};\n    auto res = twoSum(nums, 9);\n    cout << "[" << res[0] << ", " << res[1] << "]" << endl;\n}`,
 }

@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getCurrentUser, updateUser, logoutUser, getAvatarOptions } from '../utils/auth.js'
+import { useDispatch, useSelector } from 'react-redux'
+import { updateStoredUser, getAvatarOptions } from '../utils/auth.js'
+import { updateUser, clearUser } from '../store/authSlice.js'
 
 const sections = ['Profile', 'Account', 'Security', 'Privacy', 'Notifications', 'Appearance']
 const accountTypes = ['Student', 'Professional', 'Freelancer', 'Recruiter']
@@ -9,7 +11,8 @@ export default function Settings() {
   const [active, setActive] = useState('Profile')
   const [darkMode, setDarkMode] = useState(false)
   const [twoFA, setTwoFA] = useState(false)
-  const [user, setUser] = useState(getCurrentUser())
+  const user = useSelector((state) => state.auth.user)
+  const dispatch = useDispatch()
   const [form, setForm] = useState(
     user ? { fullName: user.fullName, bio: user.bio, type: user.type, github: user.github, avatar: user.avatar } : null
   )
@@ -31,13 +34,15 @@ export default function Settings() {
   const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
 
   const handleSave = () => {
-    const result = updateUser(user.username, form)
+    const result = updateStoredUser(user.username, form)
     if (result.user) {
-      setUser(result.user)
+      dispatch(updateUser(form))
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     }
   }
+
+  const handleLogout = () => dispatch(clearUser())
 
   return (
     <div className="max-w-5xl mx-auto px-5 py-14 grid md:grid-cols-[220px_1fr] gap-8">
@@ -54,7 +59,7 @@ export default function Settings() {
           </button>
         ))}
         <button
-          onClick={logoutUser}
+          onClick={handleLogout}
           className="w-full text-left px-4 py-2.5 rounded-2xl text-sm font-medium text-ink-soft hover:bg-bg-soft mt-4"
         >
           Log Out

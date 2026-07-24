@@ -12,7 +12,6 @@ export default function Home() {
 
   return (
     <div>
-      {/* Hero */}
       <section className="max-w-7xl mx-auto px-5 pt-16 pb-20 grid md:grid-cols-2 gap-12 items-center">
         <div>
           <span className="inline-block px-3 py-1 rounded-full bg-bg-soft text-accent text-xs font-semibold mb-5">
@@ -61,7 +60,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Tech marquee */}
       <section className="border-y border-border bg-bg-soft py-6 overflow-hidden">
         <div className="flex gap-10 animate-[scroll_20s_linear_infinite] whitespace-nowrap">
           {[...techLogos, ...techLogos].map((t, i) => (
@@ -71,7 +69,6 @@ export default function Home() {
         <style>{`@keyframes scroll { from { transform: translateX(0);} to { transform: translateX(-50%);} }`}</style>
       </section>
 
-      {/* Stats */}
       <section className="max-w-7xl mx-auto px-5 py-20 grid grid-cols-2 md:grid-cols-5 gap-8">
         <StatCounter target={1000000} suffix="+" label="Developers" duration={1200}
           />
@@ -87,7 +84,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Contests */}
       <section className="max-w-7xl mx-auto px-5 py-16">
         <div className="flex items-end justify-between mb-8">
           <div>
@@ -103,7 +99,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Categories */}
       <section className="bg-bg-soft py-16">
         <div className="max-w-7xl mx-auto px-5">
           <h2 className="font-display font-bold text-2xl md:text-3xl text-ink mb-8">Contest Categories</h2>
