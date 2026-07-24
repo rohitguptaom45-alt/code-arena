@@ -5,12 +5,16 @@ import Footer from './components/Footer.jsx'
 import Home from './pages/Home.jsx'
 import Contests from './pages/Contests.jsx'
 import ContestDetails from './pages/ContestDetails.jsx'
+import CreateContest from './pages/CreateContest.jsx'
 import Leaderboard from './pages/Leaderboard.jsx'
 import Chat from './pages/Chat.jsx'
 import CodeEditor from './pages/CodeEditor.jsx'
 import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 import Subscription from './pages/Subscription.jsx'
+import Profile from './pages/Profile.jsx'
+import Wallet from './pages/Wallet.jsx'
+import AdminPayments from './pages/AdminPayments.jsx'
 import More from './pages/More.jsx'
 import Settings from './pages/Settings.jsx'
 import Developers from './pages/Developers.jsx'
@@ -29,12 +33,16 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/contests" element={<Contests />} />
+          <Route path="/contests/create" element={<CreateContest />} />
           <Route path="/contests/:id" element={<ContestDetails />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/editor/:id" element={<CodeEditor />} />
           <Route path="/editor" element={<CodeEditor />} />
           <Route path="/subscription" element={<Subscription />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/wallet" element={<Wallet />} />
+          <Route path="/admin/payments" element={<AdminPayments />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/more" element={<More />} />

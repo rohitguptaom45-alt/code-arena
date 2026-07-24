@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
+import { useSelector } from 'react-redux'
 import { languageStarters, quizzes, tutorials } from '../data/mockData.js'
+import { recordProblemSolved } from '../utils/appData.js'
 
 const modes = [
   { id: 'compiler', label: '💻 Compiler', desc: 'Write & run code' },
@@ -66,12 +68,49 @@ function runJavaScript(code) {
   }
 }
 
-function simulateRun(languageId) {
-  const responses = { python: '[0, 1]', java: '[0, 1]', cpp: '[0, 1]' }
-  return { output: responses[languageId] || '(no output)', error: null, simulated: true }
+// Real execution for non-JS languages via the public Piston API (https://github.com/engineer-man/piston).
+// Free, no API key, rate-limited — fine for a small app; swap in a paid judge for production scale.
+const PISTON_RUNTIMES = {
+  python: { language: 'python', version: '3.10.0' },
+  java: { language: 'java', version: '15.0.2' },
+  cpp: { language: 'cpp', version: '10.2.0' },
+}
+
+async function runViaPiston(languageId, code, stdin) {
+  const runtime = PISTON_RUNTIMES[languageId]
+  if (!runtime) return { output: '', error: 'Unsupported language.' }
+  try {
+    const res = await fetch('https://emkc.org/api/v2/piston/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        language: runtime.language,
+        version: runtime.version,
+        files: [{ content: code }],
+        stdin: stdin || '',
+      }),
+    })
+    if (!res.ok) return { output: '', error: `Compiler service error (${res.status}). Try again in a moment.` }
+    const data = await res.json()
+    if (data.compile && data.compile.stderr) {
+      return { output: '', error: data.compile.stderr }
+    }
+    if (data.run) {
+      return { output: (data.run.stdout || '') + (data.run.stderr ? '\n' + data.run.stderr : '') || '(no output)', error: null }
+    }
+    return { output: '', error: data.message || 'Execution failed.' }
+  } catch (err) {
+    return { output: '', error: `Couldn't reach the compiler service — check your connection. (${err.message})` }
+  }
+}
+
+async function executeCode(languageId, code, stdin) {
+  if (languageId === 'javascript') return runJavaScript(code)
+  return runViaPiston(languageId, code, stdin)
 }
 
 function CompilerView() {
+  const user = useSelector((s) => s.auth.user)
   const [language, setLanguage] = useState('javascript')
   const [code, setCode] = useState(languageStarters.javascript)
   const [customInput, setCustomInput] = useState('2 7 11 15\n9')
@@ -92,27 +131,43 @@ function CompilerView() {
 
   const timeStr = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
 
-  const handleRun = () => {
+  const handleRun = async () => {
     setRunning(true)
     setActiveTab('console')
-    setTimeout(() => {
-      const result = language === 'javascript' ? runJavaScript(code) : simulateRun(language)
-      if (result.error) {
-        setOutput(`Error: ${result.error}`)
-      } else {
-        setOutput(result.output + (result.simulated ? '\n\n[simulated compiler output — connect a judge API for real execution]' : ''))
-      }
-      setRunning(false)
-    }, 500)
+    const result = await executeCode(language, code, customInput)
+    setOutput(result.error ? `Error:\n${result.error}` : result.output)
+    setRunning(false)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setRunning(true)
     setActiveTab('console')
-    setTimeout(() => {
-      setOutput('✅ All test cases passed (3/3)\nRuntime: 42ms | Memory: 14.2MB\nSubmission recorded on the leaderboard.')
+    const result = await executeCode(language, code, customInput)
+
+    if (result.error) {
+      setOutput(`❌ ${result.error}`)
       setRunning(false)
-    }, 700)
+      return
+    }
+
+    const normalized = (result.output || '').replace(/\s+/g, '')
+    const passedCount = testCases.filter((tc) => normalized.includes(tc.expected.replace(/\s+/g, ''))).length
+    const total = testCases.length
+    const passed = passedCount > 0
+
+    if (passed && user) {
+      recordProblemSolved(user.username)
+    }
+
+    setOutput(
+      `${passed ? '✅' : '⚠️'} ${passedCount}/${total} test cases matched\n\nOutput:\n${result.output}` +
+        (passed
+          ? user
+            ? '\n\n+10 points added to your account. Streak updated.'
+            : '\n\nLog in to earn points and keep your streak for solved problems.'
+          : '\n\nNo test cases matched — check your logic and try again.')
+    )
+    setRunning(false)
   }
 
   return (

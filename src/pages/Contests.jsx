@@ -1,28 +1,49 @@
 import React, { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import ContestCard from '../components/ContestCard.jsx'
 import LoginRequiredModal from '../components/LoginRequiredModal.jsx'
-import { contests } from '../data/mockData.js'
+import { contests as mockContests } from '../data/mockData.js'
+import { getAllContests, registerForContest } from '../utils/appData.js'
 
 const filters = ['All', 'Easy', 'Medium', 'Hard']
 
 export default function Contests() {
+  const user = useSelector((s) => s.auth.user)
   const [active, setActive] = useState('All')
   const [modalOpen, setModalOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const allContests = useMemo(() => getAllContests(mockContests), [])
 
   const filtered = useMemo(() => {
-    return contests.filter((c) => {
+    return allContests.filter((c) => {
       const matchesDifficulty = active === 'All' || c.difficulty === active
       const matchesQuery = c.name.toLowerCase().includes(query.toLowerCase())
       return matchesDifficulty && matchesQuery
     })
-  }, [active, query])
+  }, [allContests, active, query])
+
+  const handleRegister = (contest) => {
+    if (!user) {
+      setModalOpen(true)
+      return
+    }
+    registerForContest(contest.id, user.username)
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-5 py-14">
-      <div className="mb-8">
-        <h1 className="font-display font-bold text-3xl text-ink">All Contests</h1>
-        <p className="text-ink-soft mt-2 text-sm">Browse live, upcoming, and practice contests across every category.</p>
+      <div className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div>
+          <h1 className="font-display font-bold text-3xl text-ink">All Contests</h1>
+          <p className="text-ink-soft mt-2 text-sm">Browse live, upcoming, and practice contests — or host your own.</p>
+        </div>
+        <Link
+          to="/contests/create"
+          className="px-5 py-2.5 rounded-2xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover shadow-soft whitespace-nowrap"
+        >
+          + Create Contest
+        </Link>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between mb-8">
@@ -52,7 +73,7 @@ export default function Contests() {
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((c) => (
-            <ContestCard key={c.id} contest={c} onRegister={() => setModalOpen(true)} />
+            <ContestCard key={c.id} contest={c} onRegister={handleRegister} />
           ))}
         </div>
       )}

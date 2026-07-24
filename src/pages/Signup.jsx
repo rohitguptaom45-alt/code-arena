@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { registerUser, getAvatarOptions } from '../utils/auth.js'
+import { applySignupReferral } from '../utils/appData.js'
 import { setUser } from '../store/authSlice.js'
 
 const accountTypes = ['Student', 'Professional', 'Freelancer', 'Recruiter']
 
 export default function Signup() {
+  const [searchParams] = useSearchParams()
+  const refUsername = searchParams.get('ref')
   const [accepted, setAccepted] = useState(false)
   const [form, setForm] = useState({
     fullName: '',
@@ -44,6 +47,9 @@ export default function Signup() {
       setError(result.error)
       return
     }
+    if (refUsername) {
+      applySignupReferral(result.user.username, refUsername)
+    }
     dispatch(setUser(result.user))
     navigate('/')
   }
@@ -54,6 +60,12 @@ export default function Signup() {
       <p className="text-sm text-ink-soft mb-6">
         Already have an account? <Link to="/login" className="text-accent font-medium hover:underline">Log in</Link>
       </p>
+
+      {refUsername && (
+        <div className="mb-6 px-4 py-2.5 rounded-2xl bg-success/10 border border-success/30 text-sm text-success">
+          🎉 You were invited by <strong>@{refUsername}</strong> — sign up and you'll both earn bonus points!
+        </div>
+      )}
 
       <div className="flex gap-3 mb-6">
         <button type="button" className="flex-1 py-2.5 rounded-2xl border border-border text-sm font-medium hover:bg-bg-soft">🔵 Google</button>

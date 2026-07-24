@@ -13,6 +13,7 @@ const navItems = [
 
 const moreItems = [
   { label: 'Code Editor, Quizzes & Tutorials', to: '/editor' },
+  { label: 'Wallet & Points', to: '/wallet' },
   { label: 'Developers', to: '/developers' },
   { label: 'Settings', to: '/settings' },
   { label: 'About Us', to: '/more' },
@@ -140,6 +141,13 @@ export default function Navbar({ darkMode, setDarkMode }) {
                     <p className="text-xs text-ink-soft truncate">@{user.username} · {user.type}</p>
                   </div>
                   <Link
+                    to="/profile"
+                    onClick={() => setProfileOpen(false)}
+                    className="block px-2 py-2 text-sm rounded-xl text-ink-soft hover:bg-bg-soft hover:text-accent"
+                  >
+                    My Profile
+                  </Link>
+                  <Link
                     to="/settings"
                     onClick={() => setProfileOpen(false)}
                     className="block px-2 py-2 text-sm rounded-xl text-ink-soft hover:bg-bg-soft hover:text-accent"
@@ -216,6 +224,9 @@ export default function Navbar({ darkMode, setDarkMode }) {
                 <span className="w-8 h-8 rounded-full bg-accent-soft grid place-items-center text-base">{user.avatar}</span>
                 <span className="text-sm font-medium text-ink">{user.fullName}</span>
               </div>
+              <Link to="/profile" onClick={closeAllMenus} className="block px-3 py-2 rounded-xl text-sm text-ink-soft hover:bg-bg-soft">
+                My Profile
+              </Link>
               <Link to="/settings" onClick={closeAllMenus} className="block px-3 py-2 rounded-xl text-sm text-ink-soft hover:bg-bg-soft">
                 Settings
               </Link>

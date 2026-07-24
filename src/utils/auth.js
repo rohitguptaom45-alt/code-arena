@@ -40,6 +40,18 @@ export function registerUser({ username, password, fullName, avatar, bio, type, 
     type: type || 'Student',
     github: github?.trim() || '',
     createdAt: new Date().toISOString(),
+    // Real, non-mock stats — everything starts at zero and grows through actual activity
+    points: 0,
+    pointsHistory: [],
+    problemsSolved: 0,
+    contestsParticipated: [],
+    contestsWon: 0,
+    streakCurrent: 0,
+    streakLongest: 0,
+    lastActiveDate: null,
+    referredBy: null,
+    referralCount: 0,
+    subscription: { plan: 'Free', active: false, expiresAt: null },
   }
 
   users[key] = user
