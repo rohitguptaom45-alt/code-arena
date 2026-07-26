@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { clearUser } from '../store/authSlice.js'
+import SearchBar from './SearchBar.jsx'
+import NotificationBell from './NotificationBell.jsx'
 
 const navItems = [
   { label: 'Home', to: '/' },
@@ -108,12 +110,8 @@ export default function Navbar({ darkMode, setDarkMode }) {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          <button className="w-9 h-9 rounded-full grid place-items-center text-ink-soft hover:bg-bg-soft" aria-label="Search">
-            🔍
-          </button>
-          <button className="w-9 h-9 rounded-full grid place-items-center text-ink-soft hover:bg-bg-soft" aria-label="Notifications">
-            🔔
-          </button>
+          <SearchBar />
+          {user && <NotificationBell username={user.username} />}
           <button
             onClick={() => setDarkMode(!darkMode)}
             className="w-9 h-9 rounded-full grid place-items-center text-ink-soft hover:bg-bg-soft"
@@ -185,6 +183,19 @@ export default function Navbar({ darkMode, setDarkMode }) {
 
       {mobileOpen && (
         <div className="md:hidden border-t border-border bg-white px-5 py-3 space-y-1">
+          <div className="flex items-center gap-2 py-2">
+            <div className="flex-1">
+              <SearchBar variant="mobile" onNavigate={closeAllMenus} />
+            </div>
+            {user && <NotificationBell username={user.username} />}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="w-9 h-9 shrink-0 rounded-full grid place-items-center text-ink-soft hover:bg-bg-soft"
+              aria-label="Toggle dark mode"
+            >
+              {darkMode ? '☀️' : '🌙'}
+            </button>
+          </div>
           {navItems.map((item) => (
             <Link
               key={item.to}

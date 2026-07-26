@@ -137,6 +137,8 @@ export const developers = [
     contributions: 412,
     exp: '3rd Year Student',
     bio: 'Started CodeArena in a hostel room to make competitive coding feel less lonely and more like an arena.',
+    github: 'https://github.com/rohitguptaom45-alt',
+    linkedin: 'https://www.linkedin.com/in/rohit-gupta-666502423/',
   },
   {
     name: 'Nagender Singh',

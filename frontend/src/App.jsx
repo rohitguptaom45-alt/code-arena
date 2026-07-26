@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
@@ -13,18 +13,24 @@ import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 import Subscription from './pages/Subscription.jsx'
 import Profile from './pages/Profile.jsx'
+import UserProfile from './pages/UserProfile.jsx'
 import Wallet from './pages/Wallet.jsx'
 import AdminPayments from './pages/AdminPayments.jsx'
 import More from './pages/More.jsx'
 import Settings from './pages/Settings.jsx'
 import Developers from './pages/Developers.jsx'
 import NotFound from './pages/NotFound.jsx'
+import { getStoredTheme, applyTheme } from './utils/theme.js'
 
 export default function App() {
-  const [darkMode, setDarkMode] = useState(false)
+  const [darkMode, setDarkMode] = useState(() => getStoredTheme() === 'dark')
   const location = useLocation()
   const isEditorPage = location.pathname.startsWith('/editor')
   const isChatPage = location.pathname.startsWith('/chat')
+
+  useEffect(() => {
+    applyTheme(darkMode ? 'dark' : 'light')
+  }, [darkMode])
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -41,6 +47,7 @@ export default function App() {
           <Route path="/editor" element={<CodeEditor />} />
           <Route path="/subscription" element={<Subscription />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/u/:username" element={<UserProfile />} />
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/admin/payments" element={<AdminPayments />} />
           <Route path="/login" element={<Login />} />

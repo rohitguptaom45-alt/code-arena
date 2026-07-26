@@ -40,8 +40,8 @@ export default function Developers() {
             <div className="flex items-center justify-between text-xs text-ink-soft border-t border-border pt-3">
               <span>{dev.contributions} commits</span>
               <div className="flex gap-3 text-sm">
-                <a href="#" className="hover:text-accent">🐙</a>
-                <a href="#" className="hover:text-accent">💼</a>
+                <a href={dev.github || '#'} target={dev.github ? '_blank' : undefined} rel="noreferrer" className="hover:text-accent">🐙</a>
+                <a href={dev.linkedin || '#'} target={dev.linkedin ? '_blank' : undefined} rel="noreferrer" className="hover:text-accent">💼</a>
                 <a href="#" className="hover:text-accent">🌐</a>
               </div>
             </div>

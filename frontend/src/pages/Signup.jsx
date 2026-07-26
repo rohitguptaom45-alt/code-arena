@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { registerUserRemoteFirst, getAvatarOptions } from '../utils/auth.js'
-import { applySignupReferral } from '../utils/appData.js'
+import { applySignupReferral, addNotification } from '../utils/appData.js'
 import { setUser } from '../store/authSlice.js'
 
 const accountTypes = ['Student', 'Professional', 'Freelancer', 'Recruiter']
@@ -87,6 +87,11 @@ export default function Signup() {
     if (refUsername) {
       applySignupReferral(result.user.username, refUsername)
     }
+    addNotification(result.user.username, {
+      type: 'welcome',
+      text: `Welcome to CodeArena, ${result.user.fullName || result.user.username}! Explore contests to get started.`,
+      link: '/contests',
+    })
     dispatch(setUser(result.user))
     navigate('/')
   }

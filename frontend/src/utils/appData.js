@@ -104,6 +104,7 @@ export function registerForContest(contestId, username, referredBy) {
     updateStoredUser(key, { contestsParticipated: Array.from(participated) })
     addPoints(key, 20, 'Registered for a contest')
     logActivity(key)
+    addNotification(key, { type: 'contest', text: 'You are registered for the contest. Good luck!', link: `/contests/${contestId}` })
   }
 
   const refKey = normalize(referredBy)
@@ -283,6 +284,7 @@ export function followUser(followerUsername, targetUsername) {
   follows.push({ follower: a, following: b, at: new Date().toISOString() })
   write(FOLLOWS_KEY, follows)
   addPoints(a, 2, `Followed @${b}`)
+  addNotification(b, { type: 'follow', text: `@${a} started following you`, link: `/u/${a}` })
   return { success: true }
 }
 
@@ -311,4 +313,91 @@ export function getFollowing(username) {
 
 export function getFollowCounts(username) {
   return { followers: getFollowers(username).length, following: getFollowing(username).length }
+}
+
+// ---------------- People directory / search ----------------
+const USERS_STORE_KEY = 'codearena_users'
+
+// Every registered user, minus their password, keyed by username.
+export function getAllUsers() {
+  const users = read(USERS_STORE_KEY, {})
+  return Object.values(users).map((u) => {
+    const { password, ...safe } = u
+    return safe
+  })
+}
+
+export function getUserByUsername(username) {
+  const key = normalize(username)
+  const users = read(USERS_STORE_KEY, {})
+  const user = users[key]
+  if (!user) return null
+  const { password, ...safe } = user
+  return safe
+}
+
+// Searches both registered users and contests (mock + custom) by name/username.
+export function searchAll(query, mockContests = []) {
+  const q = (query || '').trim().toLowerCase()
+  if (!q) return { users: [], contests: [] }
+
+  const users = getAllUsers()
+    .filter((u) => u.username.includes(q) || (u.fullName || '').toLowerCase().includes(q))
+    .slice(0, 8)
+
+  const contests = getAllContests(mockContests)
+    .filter((c) => c.name.toLowerCase().includes(q) || (c.tagline || '').toLowerCase().includes(q))
+    .slice(0, 8)
+
+  return { users, contests }
+}
+
+// ---------------- Notifications ----------------
+const NOTIFICATIONS_KEY = 'codearena_notifications' // array of { id, username, type, text, link, read, at }
+
+export function getNotifications(username) {
+  const key = normalize(username)
+  return read(NOTIFICATIONS_KEY, []).filter((n) => n.username === key).sort((a, b) => new Date(b.at) - new Date(a.at))
+}
+
+export function getUnreadCount(username) {
+  return getNotifications(username).filter((n) => !n.read).length
+}
+
+export function addNotification(username, { type = 'info', text, link = '' }) {
+  const key = normalize(username)
+  if (!key) return
+  const all = read(NOTIFICATIONS_KEY, [])
+  all.unshift({
+    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    username: key,
+    type,
+    text,
+    link,
+    read: false,
+    at: new Date().toISOString(),
+  })
+  write(NOTIFICATIONS_KEY, all.slice(0, 300))
+}
+
+export function markNotificationRead(id) {
+  const all = read(NOTIFICATIONS_KEY, [])
+  const idx = all.findIndex((n) => n.id === id)
+  if (idx >= 0) {
+    all[idx].read = true
+    write(NOTIFICATIONS_KEY, all)
+  }
+}
+
+export function markAllNotificationsRead(username) {
+  const key = normalize(username)
+  const all = read(NOTIFICATIONS_KEY, [])
+  const updated = all.map((n) => (n.username === key ? { ...n, read: true } : n))
+  write(NOTIFICATIONS_KEY, updated)
+}
+
+export function clearNotifications(username) {
+  const key = normalize(username)
+  const all = read(NOTIFICATIONS_KEY, [])
+  write(NOTIFICATIONS_KEY, all.filter((n) => n.username !== key))
 }
