@@ -2,8 +2,29 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import { developers } from '../data/mockData.js'
 
+const CONTACT_EMAIL = 'rohitgupta0m45@gmail.com'
+const INSTAGRAM_USERNAME = 'laracrystgc'
+
+function InstagramIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4.2" />
+      <circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+function MailIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3" y="5" width="18" height="14" rx="2.5" />
+      <path d="M3.5 6.5 12 13l8.5-6.5" />
+    </svg>
+  )
+}
+
 const groups = {
-  Support: ['Help Center', 'FAQs', 'Contact Us', 'Report a Bug'],
+  Support: ['Help Center', 'FAQs', 'Report a Bug'],
   Community: ['Community', 'Feedback', 'API Documentation', 'Download Mobile App'],
   Legal: ['Privacy Policy', 'Terms & Conditions'],
 }
@@ -84,6 +105,38 @@ export default function More() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="mb-16">
+        <h2 className="font-display font-bold text-xl text-ink mb-6 text-center">Get in Touch</h2>
+        <div className="grid sm:grid-cols-2 gap-4 max-w-xl mx-auto">
+          <a
+            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('CodeArena — Question')}`}
+            className="card-lift flex items-center gap-4 border border-border rounded-2xl p-5 hover:border-accent-soft bg-white"
+          >
+            <span className="w-12 h-12 rounded-2xl bg-accent-soft text-white grid place-items-center shrink-0">
+              <MailIcon className="w-5 h-5" />
+            </span>
+            <span>
+              <span className="block text-sm font-semibold text-ink">Email us</span>
+              <span className="block text-xs text-ink-soft">{CONTACT_EMAIL}</span>
+            </span>
+          </a>
+          <a
+            href={`https://instagram.com/${INSTAGRAM_USERNAME}`}
+            target="_blank"
+            rel="noreferrer"
+            className="card-lift flex items-center gap-4 border border-border rounded-2xl p-5 hover:border-accent-soft bg-white"
+          >
+            <span className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-accent-soft text-white grid place-items-center shrink-0">
+              <InstagramIcon className="w-5 h-5" />
+            </span>
+            <span>
+              <span className="block text-sm font-semibold text-ink">Follow us</span>
+              <span className="block text-xs text-ink-soft">@{INSTAGRAM_USERNAME}</span>
+            </span>
+          </a>
         </div>
       </section>
 

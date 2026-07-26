@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
-import { loginUser } from '../utils/auth.js'
+import { loginUserRemoteFirst } from '../utils/auth.js'
 import { setUser } from '../store/authSlice.js'
 
 export default function Login() {
@@ -9,14 +9,16 @@ export default function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
   const dispatch = useDispatch()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-
-    const result = loginUser(username, password)
+    setSubmitting(true)
+    const result = await loginUserRemoteFirst(username, password)
+    setSubmitting(false)
 
     if (result.error) {
       setError(result.error)
@@ -91,8 +93,8 @@ export default function Login() {
             <a href="#" className="text-accent font-medium hover:underline">Forgot password?</a>
           </div>
 
-          <button type="submit" className="w-full py-3 rounded-2xl bg-accent text-white font-semibold hover:bg-accent-hover transition-colors shadow-lift">
-            Log In
+          <button type="submit" disabled={submitting} className="w-full py-3 rounded-2xl bg-accent text-white font-semibold hover:bg-accent-hover transition-colors shadow-lift disabled:opacity-60">
+            {submitting ? 'Logging in…' : 'Log In'}
           </button>
         </form>
       </div>

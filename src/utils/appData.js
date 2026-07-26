@@ -262,3 +262,53 @@ export function getReferralLink(username) {
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   return `${origin}/signup?ref=${normalize(username)}`
 }
+
+// ---------------- Follow system ----------------
+const FOLLOWS_KEY = 'codearena_follows' // array of { follower, following, at }
+
+export function getFollows() {
+  return read(FOLLOWS_KEY, [])
+}
+
+export function isFollowing(followerUsername, targetUsername) {
+  const a = normalize(followerUsername), b = normalize(targetUsername)
+  return getFollows().some((f) => f.follower === a && f.following === b)
+}
+
+export function followUser(followerUsername, targetUsername) {
+  const a = normalize(followerUsername), b = normalize(targetUsername)
+  if (!a || !b || a === b) return { error: "You can't follow yourself." }
+  const follows = getFollows()
+  if (follows.some((f) => f.follower === a && f.following === b)) return { error: 'Already following.' }
+  follows.push({ follower: a, following: b, at: new Date().toISOString() })
+  write(FOLLOWS_KEY, follows)
+  addPoints(a, 2, `Followed @${b}`)
+  return { success: true }
+}
+
+export function unfollowUser(followerUsername, targetUsername) {
+  const a = normalize(followerUsername), b = normalize(targetUsername)
+  const follows = getFollows()
+  write(FOLLOWS_KEY, follows.filter((f) => !(f.follower === a && f.following === b)))
+  return { success: true }
+}
+
+export function toggleFollow(followerUsername, targetUsername) {
+  return isFollowing(followerUsername, targetUsername)
+    ? unfollowUser(followerUsername, targetUsername)
+    : followUser(followerUsername, targetUsername)
+}
+
+export function getFollowers(username) {
+  const key = normalize(username)
+  return getFollows().filter((f) => f.following === key).map((f) => f.follower)
+}
+
+export function getFollowing(username) {
+  const key = normalize(username)
+  return getFollows().filter((f) => f.follower === key).map((f) => f.following)
+}
+
+export function getFollowCounts(username) {
+  return { followers: getFollowers(username).length, following: getFollowing(username).length }
+}

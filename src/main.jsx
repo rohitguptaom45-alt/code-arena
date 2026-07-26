@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router-dom'
 import { Provider } from 'react-redux'
 import { store } from './store/index.js'
 import App from './App.jsx'
+import { initTheme } from './utils/theme.js'
+
+initTheme()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

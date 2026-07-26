@@ -53,6 +53,26 @@
       ::-webkit-scrollbar { width: 8px; height: 8px; }
       ::-webkit-scrollbar-thumb { background: #EAEAEA; border-radius: 8px; }
       ::-webkit-scrollbar-thumb:hover { background: #FFA94D; }
+
+      /* Dark mode: retrofit onto the existing semantic utility classes (bg-white, text-ink,
+         text-ink-soft, bg-bg-soft, bg-muted, border-border) so the whole app flips without
+         needing dark: variants added to every component. */
+      html.dark { color-scheme: dark; }
+      html.dark body { background: #0b0b0c; }
+      html.dark .bg-white { background-color: #17181a !important; }
+      html.dark .bg-bg-soft { background-color: #1b1c1f !important; }
+      html.dark .bg-muted { background-color: #212226 !important; }
+      html.dark .bg-card { background-color: #17181a !important; }
+      html.dark .text-ink { color: #f3f3f4 !important; }
+      html.dark .text-ink-soft { color: #a9aab0 !important; }
+      html.dark .border-border { border-color: #2b2c30 !important; }
+      html.dark .divide-border > :not([hidden]) ~ :not([hidden]) { border-color: #2b2c30 !important; }
+      html.dark input, html.dark select, html.dark textarea {
+        background-color: #1b1c1f; color: #f3f3f4; border-color: #2b2c30;
+      }
+      html.dark input::placeholder, html.dark textarea::placeholder { color: #6f7076; }
+      html.dark ::-webkit-scrollbar-thumb { background: #2b2c30; }
+      html.dark .shadow-soft, html.dark .shadow-lift { box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
     </style>
   </head>
   <body class="font-body text-ink">

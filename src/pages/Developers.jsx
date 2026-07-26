@@ -1,5 +1,6 @@
 import React from 'react'
 import { developers, techLogos } from '../data/mockData.js'
+import FollowButton from '../components/FollowButton.jsx'
 
 export default function Developers() {
   const leads = developers.slice(0, 2)
@@ -25,6 +26,9 @@ export default function Developers() {
                 <h3 className="font-display font-bold text-lg text-ink">{dev.name}</h3>
                 <p className="text-sm text-accent font-medium">{dev.role}</p>
                 <p className="text-xs text-ink-soft mt-0.5">{dev.qualification}</p>
+                <div className="mt-2">
+                  <FollowButton username={dev.name.toLowerCase().replace(/\s+/g, '_')} size="sm" />
+                </div>
               </div>
             </div>
             <p className="text-sm text-ink-soft mt-4 leading-relaxed">{dev.bio}</p>
@@ -54,6 +58,9 @@ export default function Developers() {
             <h3 className="font-display font-semibold text-ink">{dev.name}</h3>
             <p className="text-xs text-accent font-medium mb-1">{dev.role}</p>
             <p className="text-[11px] text-ink-soft mb-2">{dev.qualification}</p>
+            <div className="mb-3">
+              <FollowButton username={dev.name.toLowerCase().replace(/\s+/g, '_')} size="sm" />
+            </div>
             <div className="flex flex-wrap justify-center gap-1.5 mb-3">
               {dev.skills.map((s) => (
                 <span key={s} className="px-2 py-0.5 rounded-full bg-muted text-xs text-ink-soft">{s}</span>

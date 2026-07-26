@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { languageStarters, quizzes, tutorials } from '../data/mockData.js'
+import { quizzes, tutorials } from '../data/mockData.js'
+import { problemBank } from '../data/problems.js'
 import { recordProblemSolved } from '../utils/appData.js'
 
 const modes = [
@@ -44,40 +45,116 @@ const languages = [
   { id: 'cpp', label: 'C++' },
 ]
 
-const testCases = [
-  { input: 'nums = [2,7,11,15], target = 9', expected: '[0,1]' },
-  { input: 'nums = [3,2,4], target = 6', expected: '[1,2]' },
-  { input: 'nums = [3,3], target = 6', expected: '[0,1]' },
-]
+const GRADED_LANGUAGES = ['javascript', 'python'] // languages with a real auto-grader wired up
 
-const hints = [
-  'Try storing values you have already seen in a hash map for O(1) lookups.',
-  'For each number, check if its complement (target - num) already exists.',
-  'You only need a single pass through the array.',
-]
-
-function runJavaScript(code) {
-  const logs = []
-  const fakeConsole = { log: (...args) => logs.push(args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ')) }
-  try {
-    const fn = new Function('console', code)
-    fn(fakeConsole)
-    return { output: logs.join('\n') || '(no output)', error: null }
-  } catch (err) {
-    return { output: '', error: err.message }
-  }
+function deepClone(v) {
+  return JSON.parse(JSON.stringify(v))
 }
 
-// Real execution for non-JS languages via the public Piston API (https://github.com/engineer-man/piston).
-// Free, no API key, rate-limited — fine for a small app; swap in a paid judge for production scale.
-const PISTON_RUNTIMES = {
-  python: { language: 'python', version: '3.10.0' },
-  java: { language: 'java', version: '15.0.2' },
-  cpp: { language: 'cpp', version: '10.2.0' },
+// Sorts every array level so triplets/groups/etc. can be compared regardless of order.
+function normalize(v) {
+  if (Array.isArray(v)) {
+    return v.map(normalize).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
+  }
+  return v
+}
+
+function valuesMatch(actual, expected, unordered) {
+  if (unordered) return JSON.stringify(normalize(actual)) === JSON.stringify(normalize(expected))
+  return JSON.stringify(actual) === JSON.stringify(expected)
+}
+
+// ---- JavaScript: real function-call harness, runs directly in the browser ----
+function runJsAgainstTests(code, problem) {
+  let solveFn
+  try {
+    // eslint-disable-next-line no-new-func
+    solveFn = new Function(`${code}\nif (typeof solve !== 'function') { throw new Error("Define a function named solve(${problem.params.join(', ')})."); }\nreturn solve;`)()
+  } catch (err) {
+    return { compileError: err.message }
+  }
+  const results = problem.testCases.map((tc) => {
+    try {
+      const actual = solveFn(...tc.args.map(deepClone))
+      return { pass: valuesMatch(actual, tc.expected, problem.unordered), actual, expected: tc.expected, args: tc.args }
+    } catch (err) {
+      return { pass: false, actual: `Runtime error: ${err.message}`, expected: tc.expected, args: tc.args }
+    }
+  })
+  return { results }
+}
+
+// ---- Python: real function-call harness, executed remotely via Piston, one call per test case ----
+async function runPythonAgainstTests(code, problem) {
+  const results = []
+  for (const tc of problem.testCases) {
+    const argsJson = JSON.stringify(tc.args)
+    const driver = `${code}
+
+import json
+_args = json.loads(${JSON.stringify(argsJson)})
+try:
+    _result = solve(*_args)
+    print("__OK__" + json.dumps(_result))
+except Exception as e:
+    print("__ERR__" + str(e))
+`
+    const res = await runViaPiston('python', driver, '')
+    if (res.error) {
+      results.push({ pass: false, actual: `Error: ${res.error}`, expected: tc.expected, args: tc.args })
+      continue
+    }
+    const line = (res.output || '').trim().split('\n').pop()
+    if (line.startsWith('__OK__')) {
+      try {
+        const actual = JSON.parse(line.slice(6))
+        results.push({ pass: valuesMatch(actual, tc.expected, problem.unordered), actual, expected: tc.expected, args: tc.args })
+      } catch {
+        results.push({ pass: false, actual: line, expected: tc.expected, args: tc.args })
+      }
+    } else {
+      results.push({ pass: false, actual: line.replace('__ERR__', 'Runtime error: ') || '(no output)', expected: tc.expected, args: tc.args })
+    }
+  }
+  return { results }
+}
+
+// ---- Java / C++ / Python: executed via Piston. Runtime versions are fetched from Piston
+// itself (rather than hardcoded) because Piston requires an exact version match and its
+// available versions change over time — a stale hardcoded version is the #1 reason a
+// language "stops working" with this API. We resolve once and cache in memory.
+const PISTON_ALIASES = {
+  python: ['python', 'python3'],
+  java: ['java'],
+  cpp: ['c++', 'cpp', 'g++'],
+}
+let runtimesCache = null
+let runtimesCacheAt = 0
+
+async function getRuntimes() {
+  if (runtimesCache && Date.now() - runtimesCacheAt < 10 * 60 * 1000) return runtimesCache
+  const res = await fetch('https://emkc.org/api/v2/piston/runtimes')
+  if (!res.ok) throw new Error(`Couldn't load compiler runtime list (${res.status}).`)
+  runtimesCache = await res.json()
+  runtimesCacheAt = Date.now()
+  return runtimesCache
+}
+
+async function resolveRuntime(languageId) {
+  const wanted = PISTON_ALIASES[languageId] || [languageId]
+  try {
+    const runtimes = await getRuntimes()
+    const match = runtimes.find((r) => wanted.includes(r.language) || (r.aliases || []).some((a) => wanted.includes(a)))
+    if (match) return { language: match.language, version: match.version }
+  } catch {
+    // fall through to a best-effort static guess below if the runtime list itself is unreachable
+  }
+  const fallback = { python: { language: 'python', version: '3.10.0' }, java: { language: 'java', version: '15.0.2' }, cpp: { language: 'c++', version: '10.2.0' } }
+  return fallback[languageId] || null
 }
 
 async function runViaPiston(languageId, code, stdin) {
-  const runtime = PISTON_RUNTIMES[languageId]
+  const runtime = await resolveRuntime(languageId)
   if (!runtime) return { output: '', error: 'Unsupported language.' }
   try {
     const res = await fetch('https://emkc.org/api/v2/piston/execute', {
@@ -90,35 +167,107 @@ async function runViaPiston(languageId, code, stdin) {
         stdin: stdin || '',
       }),
     })
-    if (!res.ok) return { output: '', error: `Compiler service error (${res.status}). Try again in a moment.` }
-    const data = await res.json()
-    if (data.compile && data.compile.stderr) {
-      return { output: '', error: data.compile.stderr }
-    }
+    const data = await res.json().catch(() => null)
+    if (!res.ok) return { output: '', error: `Compiler service error (${res.status}): ${data?.message || 'Try again in a moment.'}` }
+    if (!data) return { output: '', error: 'Compiler service returned an unexpected response.' }
+    if (data.compile && data.compile.code !== 0) return { output: '', error: data.compile.stderr || data.compile.output || 'Compile error.' }
     if (data.run) {
-      return { output: (data.run.stdout || '') + (data.run.stderr ? '\n' + data.run.stderr : '') || '(no output)', error: null }
+      const combined = (data.run.stdout || '') + (data.run.stderr ? '\n' + data.run.stderr : '')
+      return { output: combined || '(no output)', error: null }
     }
     return { output: '', error: data.message || 'Execution failed.' }
   } catch (err) {
-    return { output: '', error: `Couldn't reach the compiler service — check your connection. (${err.message})` }
+    return { output: '', error: `Couldn't reach the compiler service — check your internet connection. (${err.message})` }
   }
 }
 
-async function executeCode(languageId, code, stdin) {
-  if (languageId === 'javascript') return runJavaScript(code)
-  return runViaPiston(languageId, code, stdin)
+
+function pythonStub(problem) {
+  return `def solve(${problem.params.join(', ')}):\n    pass\n`
+}
+function genericStub(languageId) {
+  return languageId === 'java'
+    ? 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Run freely here — auto-grading is available for JavaScript and Python.");\n    }\n}'
+    : languageId === 'cpp'
+    ? '#include <iostream>\nint main() {\n    std::cout << "Run freely here — auto-grading is available for JavaScript and Python.";\n    return 0;\n}'
+    : ''
+}
+
+function starterFor(languageId, problem) {
+  if (languageId === 'javascript') return problem.starter
+  if (languageId === 'python') return pythonStub(problem)
+  return genericStub(languageId)
+}
+
+const difficultyColors = {
+  Easy: 'bg-success/10 text-success',
+  Medium: 'bg-warning/10 text-warning',
+  Hard: 'bg-danger/10 text-danger',
+}
+
+function ProblemPicker({ problem, onSelect }) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [diff, setDiff] = useState('All')
+
+  const filtered = problemBank.filter((p) => {
+    const matchesQuery = p.title.toLowerCase().includes(query.toLowerCase()) || p.tags.some((t) => t.toLowerCase().includes(query.toLowerCase()))
+    const matchesDiff = diff === 'All' || p.difficulty === diff
+    return matchesQuery && matchesDiff
+  })
+
+  return (
+    <div className="mb-4">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-3 py-2 rounded-xl border border-border text-sm font-medium hover:bg-bg-soft"
+      >
+        <span>📚 {problemBank.length} problems — click to browse</span>
+        <span>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="mt-2 border border-border rounded-xl p-3 bg-bg-soft">
+          <div className="flex gap-2 mb-2">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by title or tag..."
+              className="flex-1 px-2.5 py-1.5 rounded-lg border border-border text-xs"
+            />
+            <select value={diff} onChange={(e) => setDiff(e.target.value)} className="px-2 py-1.5 rounded-lg border border-border text-xs bg-white">
+              {['All', 'Easy', 'Medium', 'Hard'].map((d) => <option key={d}>{d}</option>)}
+            </select>
+          </div>
+          <div className="max-h-64 overflow-y-auto space-y-1">
+            {filtered.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => { onSelect(p); setOpen(false) }}
+                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between hover:bg-white ${p.id === problem.id ? 'bg-white font-semibold' : ''}`}
+              >
+                <span className="truncate">{p.title}</span>
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ml-2 ${difficultyColors[p.difficulty]}`}>{p.difficulty}</span>
+              </button>
+            ))}
+            {filtered.length === 0 && <p className="text-xs text-ink-soft text-center py-4">No matches.</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function CompilerView() {
   const user = useSelector((s) => s.auth.user)
+  const [problem, setProblem] = useState(problemBank[0])
   const [language, setLanguage] = useState('javascript')
-  const [code, setCode] = useState(languageStarters.javascript)
-  const [customInput, setCustomInput] = useState('2 7 11 15\n9')
+  const [code, setCode] = useState(starterFor('javascript', problemBank[0]))
   const [output, setOutput] = useState('Run your code to see output here.')
   const [running, setRunning] = useState(false)
   const [activeTab, setActiveTab] = useState('console')
   const [theme, setTheme] = useState('light')
   const [seconds, setSeconds] = useState(90 * 60)
+  const [lastRun, setLastRun] = useState(null) // { results }
 
   useEffect(() => {
     const t = setInterval(() => setSeconds((s) => (s > 0 ? s - 1 : 0)), 1000)
@@ -126,85 +275,110 @@ function CompilerView() {
   }, [])
 
   useEffect(() => {
-    setCode(languageStarters[language])
-  }, [language])
+    setCode(starterFor(language, problem))
+    setOutput('Run your code to see output here.')
+    setLastRun(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language, problem.id])
 
   const timeStr = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
+  const isGraded = GRADED_LANGUAGES.includes(language)
 
   const handleRun = async () => {
     setRunning(true)
     setActiveTab('console')
-    const result = await executeCode(language, code, customInput)
-    setOutput(result.error ? `Error:\n${result.error}` : result.output)
+    if (language === 'javascript') {
+      const r = runJsAgainstTests(code, { ...problem, testCases: [problem.testCases[0]] })
+      setOutput(r.compileError ? `❌ ${r.compileError}` : formatResults(r.results, false))
+    } else if (language === 'python') {
+      const r = await runPythonAgainstTests(code, { ...problem, testCases: [problem.testCases[0]] })
+      setOutput(formatResults(r.results, false))
+    } else {
+      const r = await runViaPiston(language, code, '')
+      setOutput(r.error ? `❌ ${r.error}` : r.output)
+    }
     setRunning(false)
   }
 
   const handleSubmit = async () => {
     setRunning(true)
     setActiveTab('console')
-    const result = await executeCode(language, code, customInput)
 
-    if (result.error) {
-      setOutput(`❌ ${result.error}`)
+    if (!isGraded) {
+      setOutput('⚠️ Auto-grading is available for JavaScript and Python right now. Java/C++ can still be run freely above — full multi-language grading is on the roadmap.')
       setRunning(false)
       return
     }
 
-    const normalized = (result.output || '').replace(/\s+/g, '')
-    const passedCount = testCases.filter((tc) => normalized.includes(tc.expected.replace(/\s+/g, ''))).length
-    const total = testCases.length
-    const passed = passedCount > 0
+    const r = language === 'javascript' ? runJsAgainstTests(code, problem) : await runPythonAgainstTests(code, problem)
 
-    if (passed && user) {
-      recordProblemSolved(user.username)
+    if (r.compileError) {
+      setOutput(`❌ ${r.compileError}`)
+      setRunning(false)
+      return
     }
 
+    const results = r.results
+    const passedCount = results.filter((x) => x.pass).length
+    const total = results.length
+    const allPassed = passedCount === total
+    setLastRun({ results })
+
+    if (allPassed && user) recordProblemSolved(user.username)
+
     setOutput(
-      `${passed ? '✅' : '⚠️'} ${passedCount}/${total} test cases matched\n\nOutput:\n${result.output}` +
-        (passed
+      `${allPassed ? '✅' : '⚠️'} ${passedCount}/${total} test cases passed\n\n` +
+        formatResults(results, true) +
+        (allPassed
           ? user
             ? '\n\n+10 points added to your account. Streak updated.'
             : '\n\nLog in to earn points and keep your streak for solved problems.'
-          : '\n\nNo test cases matched — check your logic and try again.')
+          : '\n\nSome test cases failed — check the details above and try again.')
     )
     setRunning(false)
+  }
+
+  function formatResults(results, verbose) {
+    return results
+      .map((r, i) => {
+        const status = r.pass ? '✅ PASS' : '❌ FAIL'
+        if (!verbose) return `${status}\nOutput: ${JSON.stringify(r.actual)}\nExpected: ${JSON.stringify(r.expected)}`
+        return `Test ${i + 1}: ${status}${r.pass ? '' : `\n  Input: ${JSON.stringify(r.args)}\n  Got: ${JSON.stringify(r.actual)}\n  Expected: ${JSON.stringify(r.expected)}`}`
+      })
+      .join('\n')
   }
 
   return (
     <div className={theme === 'dark' ? 'bg-ink' : 'bg-white'}>
       <div className="max-w-[1400px] mx-auto grid lg:grid-cols-[1.1fr_1.4fr_0.9fr] gap-0 min-h-[calc(100vh-112px)]">
         <div className={`border-r border-border p-6 overflow-y-auto ${theme === 'dark' ? 'text-white/80' : 'text-ink-soft'}`}>
+          <ProblemPicker problem={problem} onSelect={setProblem} />
+
           <div className="flex items-center justify-between mb-4">
-            <span className="px-2.5 py-1 rounded-full bg-warning/10 text-warning text-xs font-semibold">Medium</span>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${difficultyColors[problem.difficulty]}`}>{problem.difficulty}</span>
             <span className="font-mono text-sm font-semibold text-accent">⏱ {timeStr}</span>
           </div>
-          <h1 className={`font-display font-bold text-xl mb-3 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>Two Sum</h1>
-          <p className="text-sm leading-relaxed mb-4">
-            Given an array of integers <code className="font-mono bg-muted px-1 rounded">nums</code> and an integer <code className="font-mono bg-muted px-1 rounded">target</code>,
-            return indices of the two numbers such that they add up to target. You may assume exactly one solution exists, and you may not use the same element twice.
-          </p>
-          <div className="text-sm space-y-2 mb-6">
-            <div><strong className={theme === 'dark' ? 'text-white' : 'text-ink'}>Example:</strong></div>
-            <div className="font-mono text-xs bg-muted rounded-xl p-3">Input: nums = [2,7,11,15], target = 9<br/>Output: [0,1]</div>
+          <h1 className={`font-display font-bold text-xl mb-1 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>{problem.title}</h1>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {problem.tags.map((t) => <span key={t} className="px-2 py-0.5 rounded-full bg-muted text-[10px] font-medium">{t}</span>)}
           </div>
+          <p className="text-sm leading-relaxed mb-4">{problem.statement}</p>
 
-          <div className="mb-6">
-            <h3 className={`font-semibold text-sm mb-2 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>Test Cases</h3>
-            <div className="space-y-2">
-              {testCases.map((tc, i) => (
-                <div key={i} className="font-mono text-xs bg-muted rounded-xl p-3">
-                  <div>Input: {tc.input}</div>
-                  <div>Expected: {tc.expected}</div>
-                </div>
-              ))}
-            </div>
+          <div className="mb-4">
+            <h3 className={`font-semibold text-sm mb-2 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>Function signature</h3>
+            <div className="font-mono text-xs bg-muted rounded-xl p-3">solve({problem.params.join(', ')})</div>
           </div>
 
           <div>
-            <h3 className={`font-semibold text-sm mb-2 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>Hints</h3>
-            <ul className="list-disc pl-5 space-y-1.5 text-xs">
-              {hints.map((h, i) => <li key={i}>{h}</li>)}
-            </ul>
+            <h3 className={`font-semibold text-sm mb-2 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>Examples</h3>
+            <div className="space-y-2">
+              {problem.testCases.slice(0, 3).map((tc, i) => (
+                <div key={i} className="font-mono text-xs bg-muted rounded-xl p-3">
+                  <div>Input: {problem.params.map((p, j) => `${p} = ${JSON.stringify(tc.args[j])}`).join(', ')}</div>
+                  <div>Output: {JSON.stringify(tc.expected)}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -215,7 +389,7 @@ function CompilerView() {
               onChange={(e) => setLanguage(e.target.value)}
               className="text-sm font-medium bg-white border border-border rounded-xl px-3 py-1.5"
             >
-              {languages.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+              {languages.map((l) => <option key={l.id} value={l.id}>{l.label}{GRADED_LANGUAGES.includes(l.id) ? '' : ' (freeform)'}</option>)}
             </select>
             <button
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
@@ -238,7 +412,7 @@ function CompilerView() {
               disabled={running}
               className="px-5 py-2 rounded-2xl border border-border font-semibold text-sm text-ink hover:bg-white disabled:opacity-50"
             >
-              {running ? 'Running…' : '▶ Run Code'}
+              {running ? 'Running…' : '▶ Run (1st example)'}
             </button>
             <button
               onClick={handleSubmit}
@@ -252,7 +426,7 @@ function CompilerView() {
 
         <div className="flex flex-col">
           <div className="flex border-b border-border">
-            {['console', 'input', 'leaderboard'].map((t) => (
+            {['console', 'test cases', 'leaderboard'].map((t) => (
               <button
                 key={t}
                 onClick={() => setActiveTab(t)}
@@ -267,14 +441,22 @@ function CompilerView() {
             <pre className="p-4 font-mono text-xs whitespace-pre-wrap flex-1 text-ink-soft overflow-y-auto">{output}</pre>
           )}
 
-          {activeTab === 'input' && (
-            <div className="p-4 flex-1 flex flex-col">
-              <label className="text-xs font-semibold text-ink-soft mb-2">Custom Input</label>
-              <textarea
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value)}
-                className="flex-1 font-mono text-xs border border-border rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-accent-soft"
-              />
+          {activeTab === 'test cases' && (
+            <div className="p-4 flex-1 overflow-y-auto space-y-2">
+              {problem.testCases.map((tc, i) => {
+                const result = lastRun?.results?.[i]
+                return (
+                  <div key={i} className={`font-mono text-xs rounded-xl p-3 border ${result ? (result.pass ? 'border-success/40 bg-success/5' : 'border-danger/40 bg-danger/5') : 'border-border bg-muted'}`}>
+                    <div className="flex justify-between mb-1">
+                      <span>Case {i + 1}</span>
+                      {result && <span>{result.pass ? '✅' : '❌'}</span>}
+                    </div>
+                    <div>Args: {JSON.stringify(tc.args)}</div>
+                    <div>Expected: {JSON.stringify(tc.expected)}</div>
+                    {result && !result.pass && <div>Got: {JSON.stringify(result.actual)}</div>}
+                  </div>
+                )
+              })}
             </div>
           )}
 
@@ -293,6 +475,7 @@ function CompilerView() {
     </div>
   )
 }
+
 
 const difficultyStyles = {
   Easy: 'bg-success/10 text-success',

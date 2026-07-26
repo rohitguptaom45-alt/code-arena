@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { refreshStreakIfBroken, getUserRegistrations, getReferralLink } from '../utils/appData.js'
+import { refreshStreakIfBroken, getUserRegistrations, getReferralLink, getFollowCounts } from '../utils/appData.js'
 import { getCurrentUser } from '../utils/auth.js'
 import { setUser } from '../store/authSlice.js'
 
@@ -37,11 +37,14 @@ export default function Profile() {
   }
 
   const registrations = getUserRegistrations(user.username)
+  const followCounts = getFollowCounts(user.username)
   const stats = [
     { label: 'Problems Solved', value: user.problemsSolved || 0, icon: '🧩' },
     { label: 'Contests Participated', value: (user.contestsParticipated || []).length, icon: '🏁' },
     { label: 'Contests Won', value: user.contestsWon || 0, icon: '🏆' },
     { label: 'Points Balance', value: user.points || 0, icon: '💎' },
+    { label: 'Followers', value: followCounts.followers, icon: '👥' },
+    { label: 'Following', value: followCounts.following, icon: '➕' },
   ]
 
   return (
@@ -59,7 +62,7 @@ export default function Profile() {
 
       {user.bio && <p className="text-sm text-ink-soft mb-8 border-l-2 border-accent pl-3">{user.bio}</p>}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {stats.map((s) => (
           <div key={s.label} className="border border-border rounded-2xl p-5 text-center bg-white">
             <div className="text-2xl mb-1">{s.icon}</div>

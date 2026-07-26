@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit'
 import { getCurrentUser, logoutUser } from '../utils/auth.js'
+import { clearTokens } from '../utils/api.js'
 
 const authSlice = createSlice({
   name: 'auth',
@@ -15,6 +16,7 @@ const authSlice = createSlice({
     },
     clearUser(state) {
       logoutUser()
+      clearTokens()
       state.user = null
     },
   },

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { leaderboard } from '../data/mockData.js'
+import FollowButton from '../components/FollowButton.jsx'
 
 const tabs = ['Weekly', 'Monthly', 'All Time']
 const medalIcon = ['🥇', '🥈', '🥉']
@@ -49,18 +50,19 @@ export default function Leaderboard() {
       </div>
 
       <div className="border border-border rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-[50px_1fr_70px_80px_70px_60px] md:grid-cols-[60px_1fr_90px_120px_110px_100px] gap-2 px-5 py-3 bg-bg-soft text-xs font-semibold text-ink-soft">
+        <div className="grid grid-cols-[50px_1fr_70px_80px_70px_60px_90px] md:grid-cols-[60px_1fr_90px_120px_110px_100px_120px] gap-2 px-5 py-3 bg-bg-soft text-xs font-semibold text-ink-soft">
           <span>Rank</span>
           <span>User</span>
           <span>Country</span>
           <span>Rating</span>
           <span>Solved</span>
           <span>Wins</span>
+          <span></span>
         </div>
         {leaderboard.map((user) => (
           <div
             key={user.username}
-            className="grid grid-cols-[50px_1fr_70px_80px_70px_60px] md:grid-cols-[60px_1fr_90px_120px_110px_100px] gap-2 px-5 py-3 items-center border-t border-border hover:bg-bg-soft/60 text-sm"
+            className="grid grid-cols-[50px_1fr_70px_80px_70px_60px_90px] md:grid-cols-[60px_1fr_90px_120px_110px_100px_120px] gap-2 px-5 py-3 items-center border-t border-border hover:bg-bg-soft/60 text-sm"
           >
             <span className="font-mono text-ink-soft flex items-center gap-1">
               {user.rank <= 3 ? medalIcon[user.rank - 1] : user.rank}
@@ -75,6 +77,7 @@ export default function Leaderboard() {
             <span className="font-semibold text-accent">{user.rating}</span>
             <span className="text-ink-soft">{user.solved}</span>
             <span className="text-ink-soft">{user.wins}</span>
+            <span className="justify-self-end"><FollowButton username={user.username} size="sm" /></span>
           </div>
         ))}
       </div>

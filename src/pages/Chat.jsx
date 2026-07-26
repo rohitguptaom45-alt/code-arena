@@ -300,6 +300,63 @@ export default function Chat() {
             </div>
           )}
         </section>
+
+        {activeThread && (
+          <aside className="hidden lg:flex w-72 shrink-0 border-l border-border flex-col p-5 overflow-y-auto bg-bg-soft/40">
+            {mode === 'direct' ? (
+              <>
+                <div className="flex flex-col items-center text-center mb-5">
+                  <span className="w-20 h-20 rounded-full bg-accent-soft text-white grid place-items-center font-display font-bold text-2xl mb-3">
+                    {initials(activeDm.name)}
+                  </span>
+                  <h3 className="font-display font-semibold text-ink">{activeDm.name}</h3>
+                  <p className="text-xs text-ink-soft mt-1">{activeDm.country} · {activeDm.online ? 'Online now' : 'Offline'}</p>
+                </div>
+                <div className="border border-border rounded-2xl p-4 bg-white text-sm mb-4">
+                  <div className="text-ink-soft text-xs mb-1">Status</div>
+                  <div className="font-medium text-ink">{activeDm.role}</div>
+                </div>
+                <div className="border border-border rounded-2xl p-4 bg-white text-sm mb-4">
+                  <div className="text-ink-soft text-xs mb-2">Shared history</div>
+                  <div className="flex justify-between text-xs text-ink-soft">
+                    <span>Messages</span><span className="font-semibold text-ink">{activeDm.messages.length}</span>
+                  </div>
+                </div>
+                <button className="w-full py-2.5 rounded-2xl border border-border text-sm font-medium text-ink-soft hover:bg-white">
+                  🔇 Mute conversation
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex flex-col items-center text-center mb-5">
+                  <span className="w-20 h-20 rounded-2xl bg-white border border-border grid place-items-center text-3xl mb-3">
+                    {activeChannel.icon}
+                  </span>
+                  <h3 className="font-display font-semibold text-ink"># {activeChannel.name}</h3>
+                  <p className="text-xs text-ink-soft mt-1">{activeChannel.members.toLocaleString()} members</p>
+                </div>
+                <div className="border border-border rounded-2xl p-4 bg-white text-sm mb-4">
+                  <div className="text-ink-soft text-xs mb-1">About this channel</div>
+                  <p className="text-ink text-sm leading-relaxed">{activeChannel.description}</p>
+                </div>
+                <div className="border border-border rounded-2xl p-4 bg-white text-sm mb-4">
+                  <div className="text-ink-soft text-xs mb-2">Recently active</div>
+                  <div className="space-y-2">
+                    {[...new Set(activeChannel.messages.map((m) => m.user).filter(Boolean))].slice(0, 5).map((u) => (
+                      <div key={u} className="flex items-center gap-2 text-xs">
+                        <span className="w-6 h-6 rounded-full bg-accent-soft text-white grid place-items-center font-semibold text-[10px]">{initials(u)}</span>
+                        <span className="text-ink-soft truncate">{u}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <button className="w-full py-2.5 rounded-2xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover">
+                  🔔 Get channel notifications
+                </button>
+              </>
+            )}
+          </aside>
+        )}
       </div>
     </div>
   )
