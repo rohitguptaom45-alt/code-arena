@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
+import Editor from '@monaco-editor/react'
 import { quizzes, tutorials } from '../data/mockData.js'
 import { problemBank } from '../data/problems.js'
 import { recordProblemSolved } from '../utils/appData.js'
@@ -44,6 +45,8 @@ const languages = [
   { id: 'java', label: 'Java' },
   { id: 'cpp', label: 'C++' },
 ]
+
+const MONACO_LANG = { javascript: 'javascript', python: 'python', java: 'java', cpp: 'cpp' }
 
 const GRADED_LANGUAGES = ['javascript', 'python'] // languages with a real auto-grader wired up
 
@@ -398,14 +401,25 @@ function CompilerView() {
               {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
             </button>
           </div>
-          <textarea
-            spellCheck={false}
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            className={`flex-1 w-full p-4 font-mono text-sm resize-none focus:outline-none ${
-              theme === 'dark' ? 'bg-[#1e1e1e] text-[#d4d4d4]' : 'bg-white text-ink'
-            }`}
-          />
+          <div className="flex-1 min-h-0">
+            <Editor
+              height="100%"
+              language={MONACO_LANG[language] || 'plaintext'}
+              value={code}
+              onChange={(value) => setCode(value ?? '')}
+              theme={theme === 'dark' ? 'vs-dark' : 'vs'}
+              options={{
+                fontSize: 14,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 2,
+                wordWrap: 'on',
+                padding: { top: 12 },
+              }}
+              loading={<div className="h-full grid place-items-center text-sm text-ink-soft">Loading editor…</div>}
+            />
+          </div>
           <div className="flex gap-3 px-4 py-3 border-t border-border bg-bg-soft">
             <button
               onClick={handleRun}

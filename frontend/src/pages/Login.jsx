@@ -90,7 +90,7 @@ export default function Login() {
               <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="accent-accent" />
               Remember me
             </label>
-            <a href="#" className="text-accent font-medium hover:underline">Forgot password?</a>
+            <Link to="/forgot-password" className="text-accent font-medium hover:underline">Forgot password?</Link>
           </div>
 
           <button type="submit" disabled={submitting} className="w-full py-3 rounded-2xl bg-accent text-white font-semibold hover:bg-accent-hover transition-colors shadow-lift disabled:opacity-60">

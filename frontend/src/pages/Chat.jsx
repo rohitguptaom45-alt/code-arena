@@ -6,6 +6,7 @@ import {
   getDmAutoReply,
   getCommunityAutoReply,
 } from '../data/mockData.js'
+import { connectSocket, disconnectSocket, SOCKET_EVENTS } from '../utils/socket.js'
 
 function timeNow() {
   return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
@@ -25,6 +26,7 @@ export default function Chat() {
   const [draft, setDraft] = useState('')
   const [mobileShowThread, setMobileShowThread] = useState(false)
   const [typing, setTyping] = useState(false)
+  const [socketConnected, setSocketConnected] = useState(false)
   const scrollRef = useRef(null)
   const typingTimeoutRef = useRef(null)
 
@@ -34,6 +36,54 @@ export default function Chat() {
 
   const filteredDms = dms.filter((d) => d.name.toLowerCase().includes(search.toLowerCase()))
   const filteredChannels = channels.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
+
+  // Real-time layer: tries to connect to the Socket.IO server (same host as the REST
+  // backend). If nothing's listening there, we quietly stay in local demo mode below —
+  // the chat UI keeps working either way, it just won't be live across two browsers
+  // until a real socket server is running.
+  useEffect(() => {
+    const s = connectSocket()
+
+    const onConnect = () => setSocketConnected(true)
+    const onDisconnect = () => setSocketConnected(false)
+    const onIncoming = (payload) => {
+      if (!payload) return
+      if (payload.threadType === 'direct') {
+        setDms((prev) =>
+          prev.map((d) =>
+            d.id === payload.threadId
+              ? { ...d, messages: [...d.messages, { id: Date.now(), from: 'them', text: payload.text, time: timeNow() }] }
+              : d
+          )
+        )
+      } else if (payload.threadType === 'community') {
+        setChannels((prev) =>
+          prev.map((c) =>
+            c.id === payload.threadId
+              ? { ...c, messages: [...c.messages, { id: Date.now(), from: 'other', user: payload.from, text: payload.text, time: timeNow() }] }
+              : c
+          )
+        )
+      }
+    }
+
+    s.on('connect', onConnect)
+    s.on('disconnect', onDisconnect)
+    s.on(SOCKET_EVENTS.MESSAGE, onIncoming)
+
+    return () => {
+      s.off('connect', onConnect)
+      s.off('disconnect', onDisconnect)
+      s.off(SOCKET_EVENTS.MESSAGE, onIncoming)
+      disconnectSocket()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!activeThread) return
+    const s = connectSocket()
+    if (s.connected) s.emit(SOCKET_EVENTS.JOIN_ROOM, { threadType: mode, threadId: activeThread.id })
+  }, [activeThread?.id, mode])
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -61,43 +111,68 @@ export default function Chat() {
     if (!text || !activeThread) return
     setDraft('')
 
+    const s = connectSocket()
+    if (s.connected) {
+      s.emit(SOCKET_EVENTS.MESSAGE, {
+        threadType: mode,
+        threadId: activeThread.id,
+        from: currentUser.username,
+        text,
+      })
+    }
+
     if (mode === 'direct') {
       const newMsg = { id: Date.now(), from: 'me', text, time: timeNow() }
       setDms((prev) =>
         prev.map((d) => (d.id === activeThread.id ? { ...d, messages: [...d.messages, newMsg] } : d))
       )
-      setTyping(true)
-      clearTimeout(typingTimeoutRef.current)
-      typingTimeoutRef.current = setTimeout(() => {
-        setTyping(false)
-        const reply = { id: Date.now() + 1, from: 'them', text: getDmAutoReply(), time: timeNow() }
-        setDms((prev) =>
-          prev.map((d) => (d.id === activeThread.id ? { ...d, messages: [...d.messages, reply] } : d))
-        )
-      }, 1400)
+      if (!s.connected) {
+        // No live server — simulate a reply so the demo still feels alive.
+        setTyping(true)
+        clearTimeout(typingTimeoutRef.current)
+        typingTimeoutRef.current = setTimeout(() => {
+          setTyping(false)
+          const reply = { id: Date.now() + 1, from: 'them', text: getDmAutoReply(), time: timeNow() }
+          setDms((prev) =>
+            prev.map((d) => (d.id === activeThread.id ? { ...d, messages: [...d.messages, reply] } : d))
+          )
+        }, 1400)
+      }
     } else {
       const newMsg = { id: Date.now(), from: 'me', user: currentUser.username, text, time: timeNow() }
       setChannels((prev) =>
         prev.map((c) => (c.id === activeThread.id ? { ...c, messages: [...c.messages, newMsg] } : c))
       )
-      setTyping(true)
-      clearTimeout(typingTimeoutRef.current)
-      typingTimeoutRef.current = setTimeout(() => {
-        setTyping(false)
-        const auto = getCommunityAutoReply()
-        const reply = { id: Date.now() + 1, from: 'other', user: auto.user, text: auto.text, time: timeNow() }
-        setChannels((prev) =>
-          prev.map((c) => (c.id === activeThread.id ? { ...c, messages: [...c.messages, reply] } : c))
-        )
-      }, 1600)
+      if (!s.connected) {
+        setTyping(true)
+        clearTimeout(typingTimeoutRef.current)
+        typingTimeoutRef.current = setTimeout(() => {
+          setTyping(false)
+          const auto = getCommunityAutoReply()
+          const reply = { id: Date.now() + 1, from: 'other', user: auto.user, text: auto.text, time: timeNow() }
+          setChannels((prev) =>
+            prev.map((c) => (c.id === activeThread.id ? { ...c, messages: [...c.messages, reply] } : c))
+          )
+        }, 1600)
+      }
     }
   }
 
   return (
     <div className="max-w-7xl mx-auto px-0 sm:px-5 py-0 sm:py-10">
-      <div className="hidden sm:block mb-6 px-5 sm:px-0">
-        <h1 className="font-display font-bold text-3xl text-ink">Chat & Community</h1>
-        <p className="text-ink-soft mt-2 text-sm">Message other coders directly, or drop into a community channel.</p>
+      <div className="hidden sm:flex items-center justify-between mb-6 px-5 sm:px-0">
+        <div>
+          <h1 className="font-display font-bold text-3xl text-ink">Chat & Community</h1>
+          <p className="text-ink-soft mt-2 text-sm">Message other coders directly, or drop into a community channel.</p>
+        </div>
+        <span
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 ${
+            socketConnected ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
+          }`}
+          title={socketConnected ? 'Connected to the real-time chat server' : "No Socket.IO server detected at localhost:8000 — showing simulated replies"}
+        >
+          {socketConnected ? '🟢 Live' : '🟡 Demo mode'}
+        </span>
       </div>
 
       <div className="sm:border sm:border-border sm:rounded-2xl overflow-hidden bg-white flex h-[calc(100vh-64px)] sm:h-[640px]">

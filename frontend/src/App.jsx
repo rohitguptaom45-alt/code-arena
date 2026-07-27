@@ -10,6 +10,7 @@ import Leaderboard from './pages/Leaderboard.jsx'
 import Chat from './pages/Chat.jsx'
 import CodeEditor from './pages/CodeEditor.jsx'
 import Login from './pages/Login.jsx'
+import ForgotPassword from './pages/ForgotPassword.jsx'
 import Signup from './pages/Signup.jsx'
 import Subscription from './pages/Subscription.jsx'
 import Profile from './pages/Profile.jsx'
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/admin/payments" element={<AdminPayments />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/more" element={<More />} />
           <Route path="/settings" element={<Settings />} />

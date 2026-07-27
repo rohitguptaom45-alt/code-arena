@@ -207,6 +207,24 @@ export function logoutUser() {
   localStorage.removeItem(SESSION_KEY)
 }
 
+export function userExists(username) {
+  const users = readUsers()
+  return !!users[(username || '').trim().toLowerCase()]
+}
+
+// Local-only password reset for the "Forgot password?" flow. There's no email/SMS
+// verification step here (that needs a real backend endpoint, which isn't part of
+// the provided API docs) — this simply confirms the username exists on this device
+// and lets the person set a new password directly, then confirms it twice.
+export function resetPasswordLocal(username, newPassword) {
+  const users = readUsers()
+  const key = (username || '').trim().toLowerCase()
+  if (!users[key]) return { error: 'No account found with that username on this device.' }
+  users[key] = { ...users[key], password: newPassword }
+  writeUsers(users)
+  return { success: true }
+}
+
 export function getCurrentUser() {
   const key = localStorage.getItem(SESSION_KEY)
   if (!key) return null
