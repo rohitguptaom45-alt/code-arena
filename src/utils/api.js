@@ -29,7 +29,6 @@ async function request(path, { method = 'GET', body, auth = true, retry = true }
     res = await fetch(`${API_BASE}${path}`, {
       method,
       headers,
-      credentials: 'include',
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch (err) {
@@ -73,7 +72,7 @@ export const api = {
   currentUser: () => request('/users/current-user'),
   updateCurrentUser: (payload) => request('/users/current-user', { method: 'PUT', body: payload }),
   changeAvatar: (payload) => request('/users/change-avatar', { method: 'POST', body: payload }),
-  changePassword: (payload) => request('/users/passchange', { method: 'POST', body: payload }),
+  changePassword: (payload) => request('/users/passchange', { method: 'PATCH', body: payload }),
 }
 
 export { API_BASE }

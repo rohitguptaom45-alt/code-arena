@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import FollowButton from '../components/FollowButton.jsx'
 import { getUserByUsername, getFollowCounts } from '../utils/appData.js'
+import { getAvatarEmoji } from '../utils/auth.js'
 
 export default function UserProfile() {
   const { username } = useParams()
@@ -51,7 +52,7 @@ export default function UserProfile() {
     <div className="max-w-4xl mx-auto px-5 py-14">
       <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
         <div className="flex items-center gap-4">
-          <span className="w-20 h-20 rounded-3xl bg-accent-soft grid place-items-center text-4xl">{profile.avatar}</span>
+          <span className="w-20 h-20 rounded-3xl bg-accent-soft grid place-items-center text-4xl">{getAvatarEmoji(profile.avatar)}</span>
           <div>
             <h1 className="font-display font-bold text-2xl text-ink">{profile.fullName}</h1>
             <p className="text-ink-soft text-sm">@{profile.username} · {profile.type}</p>

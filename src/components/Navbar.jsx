@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { clearUser } from '../store/authSlice.js'
+import { getAvatarEmoji } from '../utils/auth.js'
 import SearchBar from './SearchBar.jsx'
 import NotificationBell from './NotificationBell.jsx'
 
@@ -128,7 +129,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
                 className="flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-2xl hover:bg-bg-soft"
               >
                 <span className="w-8 h-8 rounded-full bg-accent-soft grid place-items-center text-base">
-                  {user.avatar}
+                  {getAvatarEmoji(user.avatar)}
                 </span>
                 <span className="text-sm font-medium text-ink">{user.fullName}</span>
               </button>
@@ -232,7 +233,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
           {user ? (
             <>
               <div className="flex items-center gap-2 px-3 py-2 mt-2 border-t border-border pt-3">
-                <span className="w-8 h-8 rounded-full bg-accent-soft grid place-items-center text-base">{user.avatar}</span>
+                <span className="w-8 h-8 rounded-full bg-accent-soft grid place-items-center text-base">{getAvatarEmoji(user.avatar)}</span>
                 <span className="text-sm font-medium text-ink">{user.fullName}</span>
               </div>
               <Link to="/profile" onClick={closeAllMenus} className="block px-3 py-2 rounded-xl text-sm text-ink-soft hover:bg-bg-soft">

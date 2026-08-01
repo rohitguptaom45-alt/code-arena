@@ -2,7 +2,7 @@ import React, { useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { refreshStreakIfBroken, getUserRegistrations, getReferralLink, getFollowCounts } from '../utils/appData.js'
-import { getCurrentUser } from '../utils/auth.js'
+import { getCurrentUser, getAvatarEmoji } from '../utils/auth.js'
 import { setUser } from '../store/authSlice.js'
 
 function daysAgo(iso) {
@@ -50,7 +50,7 @@ export default function Profile() {
   return (
     <div className="max-w-4xl mx-auto px-5 py-14">
       <div className="flex items-center gap-4 mb-8">
-        <span className="w-20 h-20 rounded-3xl bg-accent-soft grid place-items-center text-4xl">{user.avatar}</span>
+        <span className="w-20 h-20 rounded-3xl bg-accent-soft grid place-items-center text-4xl">{getAvatarEmoji(user.avatar)}</span>
         <div>
           <h1 className="font-display font-bold text-2xl text-ink">{user.fullName}</h1>
           <p className="text-ink-soft text-sm">@{user.username} · {user.type}</p>

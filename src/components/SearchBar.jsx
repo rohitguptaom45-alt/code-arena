@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { searchAll } from '../utils/appData.js'
 import { contests as mockContests } from '../data/mockData.js'
+import { getAvatarEmoji } from '../utils/auth.js'
 
 export default function SearchBar({ variant = 'desktop', onNavigate }) {
   const [open, setOpen] = useState(false)
@@ -69,7 +70,7 @@ export default function SearchBar({ variant = 'desktop', onNavigate }) {
                       className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-bg-soft text-left"
                     >
                       <span className="w-8 h-8 rounded-full bg-accent-soft grid place-items-center text-base shrink-0">
-                        {u.avatar || '🧑‍💻'}
+                        {getAvatarEmoji(u.avatar)}
                       </span>
                       <span className="min-w-0">
                         <span className="block text-sm text-ink font-medium truncate">{u.fullName}</span>

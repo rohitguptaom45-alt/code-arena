@@ -151,12 +151,12 @@ export default function Settings() {
             <div>
               <label className="text-xs font-semibold text-ink-soft block mb-2">Avatar</label>
               <div className="flex flex-wrap gap-2">
-                {getAvatarOptions().map((emoji) => (
+                {getAvatarOptions().map(({ id, emoji }) => (
                   <button
-                    key={emoji}
-                    onClick={() => setForm((f) => ({ ...f, avatar: emoji }))}
+                    key={id}
+                    onClick={() => setForm((f) => ({ ...f, avatar: id }))}
                     className={`w-10 h-10 rounded-2xl grid place-items-center text-lg border transition-colors ${
-                      form.avatar === emoji ? 'border-accent bg-bg-soft' : 'border-border hover:bg-bg-soft'
+                      form.avatar === id ? 'border-accent bg-bg-soft' : 'border-border hover:bg-bg-soft'
                     }`}
                   >
                     {emoji}

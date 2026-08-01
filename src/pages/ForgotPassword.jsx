@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { userExists, resetPasswordLocal } from '../utils/auth.js'
+import { userExistsByEmail, resetPasswordLocal } from '../utils/auth.js'
 
 export default function ForgotPassword() {
   const [step, setStep] = useState(1) // 1 = find account, 2 = set new password
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
@@ -14,12 +14,12 @@ export default function ForgotPassword() {
   const handleFindAccount = (e) => {
     e.preventDefault()
     setError('')
-    if (!username.trim()) {
-      setError('Enter your username.')
+    if (!email.trim()) {
+      setError('Enter your email.')
       return
     }
-    if (!userExists(username)) {
-      setError('No account found with that username on this device.')
+    if (!userExistsByEmail(email)) {
+      setError('No account found with that email on this device.')
       return
     }
     setStep(2)
@@ -36,7 +36,7 @@ export default function ForgotPassword() {
       setError('Passwords do not match.')
       return
     }
-    const result = resetPasswordLocal(username, newPassword)
+    const result = resetPasswordLocal(email, newPassword)
     if (result.error) {
       setError(result.error)
       return
@@ -67,12 +67,13 @@ export default function ForgotPassword() {
         <form onSubmit={handleFindAccount} className="space-y-4">
           {error && <div className="px-4 py-2.5 rounded-2xl bg-danger/10 border border-danger/30 text-sm text-danger">{error}</div>}
           <div>
-            <label className="text-xs font-semibold text-ink-soft block mb-1.5">Username</label>
+            <label className="text-xs font-semibold text-ink-soft block mb-1.5">Email</label>
             <input
+              type="email"
               autoFocus
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="your_username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@gmail.com"
               className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft"
             />
           </div>
@@ -88,7 +89,7 @@ export default function ForgotPassword() {
         <form onSubmit={handleReset} className="space-y-4">
           {error && <div className="px-4 py-2.5 rounded-2xl bg-danger/10 border border-danger/30 text-sm text-danger">{error}</div>}
           <div className="px-4 py-2.5 rounded-2xl bg-bg-soft border border-border text-sm text-ink-soft">
-            Resetting password for <strong className="text-ink">@{username.trim().toLowerCase()}</strong>
+            Resetting password for <strong className="text-ink">{email.trim().toLowerCase()}</strong>
           </div>
           <div>
             <label className="text-xs font-semibold text-ink-soft block mb-1.5">New password</label>
