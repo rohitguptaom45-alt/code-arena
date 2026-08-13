@@ -12,9 +12,10 @@ export function clearTokens() {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(REFRESH_TOKEN_KEY)
 }
-async function request(path, { method = 'GET', body, auth = true, retry = true } = {}) {
+async function request(path, { method = 'GET', body, auth = true, retry = true, extraHeaders } = {}) {
   const headers = {
     'Content-Type': 'application/json',
+    ...extraHeaders,
   }
   const token = getAccessToken()
   if (auth && token) headers.Authorization = `Bearer ${token}`
@@ -23,6 +24,7 @@ async function request(path, { method = 'GET', body, auth = true, retry = true }
     res = await fetch(`${API_BASE}${path}`, {
       method,
       headers,
+      credentials: 'include',
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch (err) {
@@ -41,6 +43,7 @@ async function request(path, { method = 'GET', body, auth = true, retry = true }
           body,
           auth,
           retry: false,
+          extraHeaders,
         })
       }
     } catch {
@@ -336,83 +339,79 @@ export const nestApi = {
     }),
 }
 
-export const communityApi = {
-  create: (payload) =>
-    request('/community/create', {
-      method: 'POST',
-      body: payload,
+export const userSearchApi = {
+  search: (username) =>
+    request(`/users/search?username=${encodeURIComponent(username)}`, {
+      auth: false,
     }),
-  update: (communityId, payload) =>
-    request(`/community/update/${communityId}`, {
+  getProfile: (username) =>
+    request(`/users/get/${encodeURIComponent(username)}`, {
+      auth: false,
+    }),
+}
+
+export const friendApi = {
+  send: (userId) => request('/chat/requests', { method: 'POST', body: { userId } }),
+  respond: (requestId, accept) =>
+    request('/chat/requests', { method: 'PUT', body: { requestId, accept } }),
+  getPendingRequests: () => request('/users/notification'),
+}
+
+export const chatApi = {
+  getMyChats: () => request('/chat/chats'),
+  getMyGroups: () => request('/chat/my'),
+  createGroup: (name, memberIds, description, avatar) =>
+    request('/chat', { method: 'POST', body: { name, description, avatar, members: memberIds } }),
+  getDetails: (chatId, populate = true) =>
+    request(`/chat/${chatId}${populate ? '?populate=true' : ''}`),
+  getMessages: (chatId, page = 1) => request(`/chat/${chatId}/messages?page=${page}`),
+  addMembers: (chatId, memberIds) =>
+    request(`/chat/${chatId}/members`, { method: 'PUT', body: { members: memberIds } }),
+  removeMember: (chatId, memberId) =>
+    request(`/chat/${chatId}/members`, { method: 'DELETE', body: { memberId } }),
+  rename: (chatId, name) => request(`/chat/${chatId}`, { method: 'PATCH', body: { name } }),
+  leaveGroup: (chatId) => request(`/chat/${chatId}/leave`, { method: 'DELETE' }),
+  deleteGroup: (chatId) => request(`/chat/${chatId}`, { method: 'DELETE' }),
+  deleteChat: (chatId) => request(`/chat/${chatId}`, { method: 'DELETE' }),
+}
+
+export const notificationApi = {
+  getAll: () => request('/users/notification'),
+}
+
+const ADMIN_SECRET_KEY_STORAGE = 'codearena_admin_secret_key'
+export function getAdminSecretKey() {
+  return sessionStorage.getItem(ADMIN_SECRET_KEY_STORAGE) || ''
+}
+export function setAdminSecretKey(key) {
+  if (key) sessionStorage.setItem(ADMIN_SECRET_KEY_STORAGE, key)
+}
+export function clearAdminSecretKey() {
+  sessionStorage.removeItem(ADMIN_SECRET_KEY_STORAGE)
+}
+export const adminApi = {
+  getUsers: (page = 1, search = '') =>
+    request(`/admin/users?page=${page}&search=${encodeURIComponent(search)}`, {
+      extraHeaders: { 'x-admin-secret-key': getAdminSecretKey() },
+    }),
+  setUserStatus: (userId, status) =>
+    request(`/admin/users/${userId}/status`, {
       method: 'PATCH',
-      body: payload,
+      body: { status },
+      extraHeaders: { 'x-admin-secret-key': getAdminSecretKey() },
     }),
-  remove: (communityId) =>
-    request(`/community/delete/${communityId}`, {
-      method: 'DELETE',
+  getChats: (page = 1) =>
+    request(`/admin/chats?page=${page}`, {
+      extraHeaders: { 'x-admin-secret-key': getAdminSecretKey() },
     }),
-  updateAvatar: (communityId, payload) =>
-    request(`/community/update/avatar/${communityId}`, {
-      method: 'POST',
-      body: payload,
-    }),
-  updatePermissions: (communityId, payload) =>
-    request(`/community/update/permissions/${communityId}`, {
-      method: 'PATCH',
-      body: payload,
-    }),
-  getById: (communityId) =>
-    request(`/community/get/${communityId}`, {
-      auth: false,
-    }),
-  getAll: (page = 1) =>
-    request(`/community/getall?page=${page}`, {
-      auth: false,
-    }),
-  search: (query, page = 1) =>
-    request(`/community/search?q=${encodeURIComponent(query)}&page=${page}`, {
-      auth: false,
-    }),
-  join: (communityId) =>
-    request(`/community/join/${communityId}`, {
-      method: 'POST',
-    }),
-  leave: (communityId) =>
-    request(`/community/leave/${communityId}`, {
-      method: 'POST',
-    }),
-  getMembers: (communityId, page = 1) =>
-    request(`/community/members/${communityId}?page=${page}`, {
-      auth: false,
-    }),
-  removeMember: (communityId, memberId) =>
-    request(`/community/members/${communityId}/${memberId}`, {
-      method: 'DELETE',
-    }),
-  getUserCommunities: () => request('/community/mine'),
-  sendMessage: (communityId, content) =>
-    request(`/community/message/${communityId}`, {
-      method: 'POST',
-      body: { content },
-    }),
-  getMessages: (communityId, page = 1) =>
-    request(`/community/message/${communityId}?page=${page}`),
-  updateMessage: (messageId, content) =>
-    request(`/community/message/update/${messageId}`, {
-      method: 'PATCH',
-      body: { content },
+  getChatMessages: (chatId, page = 1) =>
+    request(`/admin/chats/${chatId}/messages?page=${page}`, {
+      extraHeaders: { 'x-admin-secret-key': getAdminSecretKey() },
     }),
   deleteMessage: (messageId) =>
-    request(`/community/message/delete/${messageId}`, {
+    request(`/admin/messages/${messageId}`, {
       method: 'DELETE',
-    }),
-  pinMessage: (messageId) =>
-    request(`/community/message/pin/${messageId}`, {
-      method: 'POST',
-    }),
-  unpinMessage: (messageId) =>
-    request(`/community/message/unpin/${messageId}`, {
-      method: 'POST',
+      extraHeaders: { 'x-admin-secret-key': getAdminSecretKey() },
     }),
 }
 

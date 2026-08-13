@@ -456,7 +456,7 @@ export default function CreateContest() {
                   value={p.constraints}
                   onChange={(e) => updateProblem(idx, 'constraints', e.target.value)}
                   rows={2}
-                  placeholder={'constraints, one per line, e.g.\n1 <= n <= 10^5\n-1000 <= arr[i] <= 1000'}
+                  placeholder={'Constraints, one per line, e.g.\n1 <= n <= 10^5\n-1000 <= arr[i] <= 1000'}
                   className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono resize-none"
                 />
               </div>

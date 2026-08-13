@@ -8,6 +8,7 @@ export function getSocket() {
     autoConnect: false,
     reconnectionAttempts: 3,
     reconnectionDelay: 1500,
+    withCredentials: true,
     timeout: 4000,
     auth: {
       token: getAccessToken() || undefined,
@@ -24,7 +25,6 @@ export function disconnectSocket() {
   if (socket && socket.connected) socket.disconnect()
 }
 export const SOCKET_EVENTS = {
-  MESSAGE: 'chat:message',
-  TYPING: 'chat:typing',
-  JOIN_ROOM: 'chat:join',
+  NEW_MESSAGE: 'NEW_MESSAGE',
+  NEW_MESSAGE_ALERT: 'NEW_MESSAGE_ALERT',
 }

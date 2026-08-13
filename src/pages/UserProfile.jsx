@@ -94,7 +94,26 @@ export default function UserProfile() {
             )}
           </div>
         </div>
-        <FollowButton username={profile.username} remoteId={profile.remoteId} />
+        <div className="flex items-center gap-2">
+          {profile.remoteId && (
+            <>
+              <button
+                onClick={() => navigate(currentUser ? `/chat?with=${profile.remoteId}` : '/login')}
+                className="px-4 py-1.5 rounded-full text-sm font-semibold border border-border text-ink hover:bg-bg-soft"
+              >
+                💬 Message
+              </button>
+              <button
+                onClick={() => navigate(currentUser ? `/chat?newGroupWith=${profile.remoteId}` : '/login')}
+                className="px-4 py-1.5 rounded-full text-sm font-semibold border border-border text-ink hover:bg-bg-soft"
+                title="Start a group chat with this person"
+              >
+                👥 Add to group
+              </button>
+            </>
+          )}
+          <FollowButton username={profile.username} remoteId={profile.remoteId} />
+        </div>
       </div>
 
       {profile.bio && <p className="text-sm text-ink-soft mb-8 border-l-2 border-accent pl-3">{profile.bio}</p>}

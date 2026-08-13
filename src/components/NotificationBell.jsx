@@ -1,11 +1,42 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getNotifications, getUnreadCount, markAllNotificationsRead, markNotificationRead } from '../utils/appData.js'
+import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../utils/appData.js'
+import { fetchNotificationsRemote } from '../utils/chatSocialApi.js'
 const TYPE_ICON = {
   follow: '👥',
   contest: '🏁',
   welcome: '👋',
   info: '🔔',
+  FRIEND_REQUEST: '🤝',
+}
+const READ_REMOTE_KEY = 'codearena_read_remote_notifications'
+function getReadRemoteIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(READ_REMOTE_KEY) || '[]'))
+  } catch {
+    return new Set()
+  }
+}
+function markRemoteRead(id) {
+  const ids = getReadRemoteIds()
+  ids.add(id)
+  localStorage.setItem(READ_REMOTE_KEY, JSON.stringify([...ids]))
+}
+function markAllRemoteRead(ids) {
+  const set = getReadRemoteIds()
+  ids.forEach((id) => set.add(id))
+  localStorage.setItem(READ_REMOTE_KEY, JSON.stringify([...set]))
+}
+function normalizeRemote(n, readIds) {
+  return {
+    id: `remote:${n.id}`,
+    type: 'FRIEND_REQUEST',
+    text: `${n.fullName || n.username} wants to chat with you`,
+    at: n.createdAt || new Date().toISOString(),
+    read: readIds.has(n.id),
+    link: '/chat',
+    _remoteId: n.id,
+  }
 }
 function timeAgo(iso) {
   const diffMs = Date.now() - new Date(iso).getTime()
@@ -20,9 +51,15 @@ function timeAgo(iso) {
 export default function NotificationBell({ username }) {
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
+  const [remoteNotifications, setRemoteNotifications] = useState([])
   const ref = useRef(null)
   const navigate = useNavigate()
-  const refresh = () => setNotifications(getNotifications(username))
+  const refresh = async () => {
+    setNotifications(getNotifications(username))
+    const res = await fetchNotificationsRemote()
+    const readIds = getReadRemoteIds()
+    setRemoteNotifications(res.notifications.map((n) => normalizeRemote(n, readIds)))
+  }
   useEffect(() => {
     refresh()
     const interval = setInterval(refresh, 4000)
@@ -35,19 +72,22 @@ export default function NotificationBell({ username }) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-  const unread = notifications.filter((n) => !n.read).length
+  const merged = [...notifications, ...remoteNotifications].sort((a, b) => new Date(b.at) - new Date(a.at))
+  const unread = merged.filter((n) => !n.read).length
   const handleOpen = () => {
     setOpen((v) => !v)
     refresh()
   }
   const handleItemClick = (n) => {
-    markNotificationRead(n.id)
+    if (n._remoteId) markRemoteRead(n._remoteId)
+    else markNotificationRead(n.id)
     refresh()
     setOpen(false)
     if (n.link) navigate(n.link)
   }
   const handleMarkAllRead = () => {
     markAllNotificationsRead(username)
+    markAllRemoteRead(remoteNotifications.map((n) => n._remoteId))
     refresh()
   }
   return (
@@ -70,17 +110,17 @@ export default function NotificationBell({ username }) {
         <div className="absolute top-full right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white border border-border rounded-2xl shadow-lift p-2 z-50">
           <div className="flex items-center justify-between px-2 py-1.5 mb-1">
             <span className="text-sm font-semibold text-ink">Notifications</span>
-            {notifications.length > 0 && (
+            {merged.length > 0 && (
               <button onClick={handleMarkAllRead} className="text-xs font-medium text-accent hover:underline">
                 Mark all read
               </button>
             )}
           </div>
-          {notifications.length === 0 ? (
+          {merged.length === 0 ? (
             <p className="text-center text-xs text-ink-soft py-8">You're all caught up 🎉</p>
           ) : (
             <div className="space-y-1">
-              {notifications.map((n) => (
+              {merged.map((n) => (
                 <button
                   key={n.id}
                   onClick={() => handleItemClick(n)}

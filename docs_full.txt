@@ -1,0 +1,613 @@
+This Docs is Api call requested by the frontend dev
+				Subjected to 	---Rohit Gupta
+Community Api 
+
+create gruop
+
+Api = {{server}}/api/v1/chat   POST
+input = {
+  "name": "Pau bhaji wale hai haam ",
+  "description": "only tyre seller can join",
+  "avatar": "7",
+  "members": [
+    "019f9b26-6507-7018-9def-5b4f940cfec8",
+    "019f9b25-c802-726a-ba7d-fdfe0e29a87b",
+    "019f9b1e-d4ca-752e-baa8-f1fc643db4dc"
+  ]
+}
+
+Responce ={
+    "statusCode": 201,
+    "data": {
+        "id": "019fe1ad-0977-769e-8b82-97f6d1daeb40",
+        "name": "Pau bhaji wale hai haam ",
+        "description": "only tyre seller can join",
+        "avatar": "7",
+        "isGroup": true,
+        "adminId": "019fd2f7-e596-74be-9b53-8ba3a7adf8fb",
+        "allowMessages": true,
+        "allowMedia": true,
+        "allowFiles": true,
+        "allowMemberInvite": true,
+        "allowMemberEdit": false,
+        "onlyAdminCanAnnounce": false,
+        "onlyAdminCanPin": false,
+        "createdAt": "2026-08-08T14:00:41.592Z",
+        "updatedAt": "2026-08-08T14:00:41.592Z",
+        "admin": {
+            "id": "019fd2f7-e596-74be-9b53-8ba3a7adf8fb",
+            "username": "ArjunRao",
+            "avatar": "5"
+        },
+        "members": [
+            {
+                "id": "019fe1ad-09dd-75fa-b879-031d5f0b7dce",
+                "userId": "019f9b26-6507-7018-9def-5b4f940cfec8",
+                "communityId": "019fe1ad-0977-769e-8b82-97f6d1daeb40",
+                "joinedAt": "2026-08-08T14:00:41.592Z",
+                "user": {
+                    "id": "019f9b26-6507-7018-9def-5b4f940cfec8",
+                    "username": "arjun_dev",
+                    "avatar": "https://example.com/images/arjun.png"
+                }
+            },
+            {
+                "id": "019fe1ad-09dd-75fa-b879-070d73699d24",
+                "userId": "019f9b25-c802-726a-ba7d-fdfe0e29a87b",
+                "communityId": "019fe1ad-0977-769e-8b82-97f6d1daeb40",
+                "joinedAt": "2026-08-08T14:00:41.592Z",
+                "user": {
+                    "id": "019f9b25-c802-726a-ba7d-fdfe0e29a87b",
+                    "username": "priya_codes",
+                    "avatar": "https://example.com/images/priya.png"
+                }
+            },
+            {
+                "id": "019fe1ad-09dd-75fa-b879-08f27235197f",
+                "userId": "019f9b1e-d4ca-752e-baa8-f1fc643db4dc",
+                "communityId": "019fe1ad-0977-769e-8b82-97f6d1daeb40",
+                "joinedAt": "2026-08-08T14:00:41.592Z",
+                "user": {
+                    "id": "019f9b1e-d4ca-752e-baa8-f1fc643db4dc",
+                    "username": "nagendra_dev",
+                    "avatar": "5"
+                }
+            },
+            {
+                "id": "019fe1ad-09dd-75fa-b879-0de06138a908",
+                "userId": "019fd2f7-e596-74be-9b53-8ba3a7adf8fb",
+                "communityId": "019fe1ad-0977-769e-8b82-97f6d1daeb40",
+                "joinedAt": "2026-08-08T14:00:41.592Z",
+                "user": {
+                    "id": "019fd2f7-e596-74be-9b53-8ba3a7adf8fb",
+                    "username": "ArjunRao",
+                    "avatar": "5"
+                }
+            }
+        ]
+    },
+    "message": "group created successfully",
+    "success": true
+}
+
+
+get user All chat
+
+Api = {{server}}/api/v1/chat/chats   get 
+input = 
+
+Responce = {
+    "statusCode": 200,
+    "data": [
+        {
+            "id": "019fd086-8316-7768-9c41-91fe09ffdd2f",
+            "isGroup": true,
+            "name": "Project Dev Group",
+            "description": "Group chat for backend and frontend collaboration",
+            "avatar": "7",
+            "admin": {
+                "id": "019fa537-7303-7195-82a0-89b035bb9d76",
+                "username": "viaks123",
+                "avatar": "3"
+            },
+            "members": [
+                {
+                    "user": {
+                        "id": "019f9b26-6507-7018-9def-5b4f940cfec8",
+                        "username": "arjun_dev",
+                        "avatar": "https://example.com/images/arjun.png"
+                    }
+                },
+                {
+                    "user": {
+                        "id": "019f9b25-c802-726a-ba7d-fdfe0e29a87b",
+                        "username": "priya_codes",
+                        "avatar": "https://example.com/images/priya.png"
+                    }
+                },
+                {
+                    "user": {
+                        "id": "019f9b1e-d4ca-752e-baa8-f1fc643db4dc",
+                        "username": "nagendra_dev",
+                        "avatar": "5"
+                    }
+                },
+                {
+                    "user": {
+                        "id": "019fa537-7303-7195-82a0-89b035bb9d76",
+                        "username": "viaks123",
+                        "avatar": "3"
+                    }
+                },
+                {
+                    "user": {
+                        "id": "019fd2f7-e596-74be-9b53-8ba3a7adf8fb",
+                        "username": "ArjunRao",
+                        "avatar": "5"
+                    }
+                }
+            ],
+            "lastMessage": null,
+            "createdAt": "2026-08-05T06:05:04.153Z",
+            "updatedAt": "2026-08-05T06:05:04.153Z"
+        },
+        {
+            "id": "019fd07e-8575-7488-8fe4-258e1dc24c77",
+            "isGroup": true,
+            "name": "Project Dev Group",
+            "description": "Group chat for backend and frontend collaboration",
+            "avatar": "7",
+            "admin": {
+                "id": "019fa537-7303-7195-82a0-89b035bb9d76",
+                "username": "viaks123",
+                "avatar": "3"
+            },
+            "members": [
+                {
+                    "user": {
+                        "id": "019f9b26-6507-7018-9def-5b4f940cfec8",
+                        "username": "arjun_dev",
+                        "avatar": "https://example.com/images/arjun.png"
+                    }
+                },
+                {
+                    "user": {
+                        "id": "019f9b25-c802-726a-ba7d-fdfe0e29a87b",
+                        "username": "priya_codes",
+                        "avatar": "https://example.com/images/priya.png"
+                    }
+                },
+                {
+                    "user": {
+                        "id": "019f9b1e-d4ca-752e-baa8-f1fc643db4dc",
+                        "username": "nagendra_dev",
+                        "avatar": "5"
+                    }
+                },
+                {
+                    "user": {
+                        "id": "019fa537-7303-7195-82a0-89b035bb9d76",
+                        "username": "viaks123",
+                        "avatar": "3"
+                    }
+                }
+            ],
+            "lastMessage": null,
+            "createdAt": "2026-08-05T05:56:20.486Z",
+            "updatedAt": "2026-08-05T05:56:20.486Z"
+        },
+        {
+            "id": "019fbd0b-c002-706a-924c-bb23953a00fc",
+            "isGroup": true,
+            "name": "Book Lovers Hub",
+            "description": "A place for readers to share reviews, recommendations, and discuss their favorite books.",
+            "avatar": "5",
+            "admin": {
+                "id": "019fa537-7303-7195-82a0-89b035bb9d76",
+                "username": "viaks123",
+                "avatar": "3"
+            },
+            "members": [
+                {
+                    "user": {
+                        "id": "019fa537-7303-7195-82a0-89b035bb9d76",
+                        "username": "viaks123",
+                        "avatar": "3"
+                    }
+                }
+            ],
+            "lastMessage": null,
+            "createdAt": "2026-08-01T11:18:11.738Z",
+            "updatedAt": "2026-08-01T11:34:50.332Z"
+        },
+        {
+            "id": "019fbd15-659e-7581-8d48-a48d3afc4eb8",
+            "isGroup": true,
+            "name": "Tech Enthusiasts",
+            "description": "A community for sharing and discussing the latest in technology.",
+            "avatar": "5",
+            "admin": {
+                "id": "019fa537-7303-7195-82a0-89b035bb9d76",
+                "username": "viaks123",
+                "avatar": "3"
+            },
+            "members": [
+                {
+                    "user": {
+                        "id": "019fa537-7303-7195-82a0-89b035bb9d76",
+                        "username": "viaks123",
+                        "avatar": "3"
+                    }
+                }
+            ],
+            "lastMessage": null,
+            "createdAt": "2026-08-01T11:28:43.934Z",
+            "updatedAt": "2026-08-01T11:34:03.450Z"
+        }
+    ],
+    "message": "Chats fetched successfully.",
+    "success": true
+}
+
+get user Groups
+
+Api ={{server}}/api/v1/chat/my   get 
+input = 
+
+Responce ={
+    "statusCode": 200,
+    "data": [
+        {
+            "id": "019fd086-8316-7768-9c41-91fe09ffdd2f",
+            "isGroup": true,
+            "name": "Laude ka group",
+            "description": "Group chat for backend and frontend collaboration",
+            "avatar": "7",
+            "createdAt": "2026-08-05T06:05:04.153Z",
+            "updatedAt": "2026-08-08T13:13:37.994Z",
+            "messages": [],
+            "_count": {
+                "members": 5
+            }
+        },
+        {
+            "id": "019fd07e-8575-7488-8fe4-258e1dc24c77",
+            "isGroup": true,
+            "name": "Project Dev Group",
+            "description": "Group chat for backend and frontend collaboration",
+            "avatar": "7",
+            "createdAt": "2026-08-05T05:56:20.486Z",
+            "updatedAt": "2026-08-05T05:56:20.486Z",
+            "messages": [],
+            "_count": {
+                "members": 4
+            }
+        },
+        {
+            "id": "019fbd0b-c002-706a-924c-bb23953a00fc",
+            "isGroup": true,
+            "name": "Book Lovers Hub",
+            "description": "A place for readers to share reviews, recommendations, and discuss their favorite books.",
+            "avatar": "5",
+            "createdAt": "2026-08-01T11:18:11.738Z",
+            "updatedAt": "2026-08-01T11:34:50.332Z",
+            "messages": [],
+            "_count": {
+                "members": 1
+            }
+        },
+        {
+            "id": "019fbd15-659e-7581-8d48-a48d3afc4eb8",
+            "isGroup": true,
+            "name": "Tech Enthusiasts",
+            "description": "A community for sharing and discussing the latest in technology.",
+            "avatar": "5",
+            "createdAt": "2026-08-01T11:28:43.934Z",
+            "updatedAt": "2026-08-01T11:34:03.450Z",
+            "messages": [],
+            "_count": {
+                "members": 1
+            }
+        }
+    ],
+    "message": "User Groups Fetched Successfully",
+    "success": true
+}
+
+rename community
+
+Api ={{server}}/api/v1/chat/:communityId   PATCH
+input = {
+    "name":"Laude ka group"
+}
+
+Responce = {
+    "success": true,
+    "message": "Group renamed successfully.",
+    "community": {
+        "id": "019fd086-8316-7768-9c41-91fe09ffdd2f",
+        "name": "Laude ka group",
+        "description": "Group chat for backend and frontend collaboration",
+        "avatar": "7",
+        "isGroup": true,
+        "adminId": "019fa537-7303-7195-82a0-89b035bb9d76",
+        "updatedAt": "2026-08-08T13:13:37.994Z"
+    }
+}
+
+Get community details
+
+Api ={{server}}/api/v1/chat/:communityId?populate=true  
+
+if populate is true thhan the memeber detail also fetch otherwise only id 
+
+input = {
+     
+}
+
+Responce = {
+    "success": true,
+    "community": {
+        "id": "019fd086-8316-7768-9c41-91fe09ffdd2f",
+        "name": "Laude ka group",
+        "description": "Group chat for backend and frontend collaboration",
+        "avatar": "7",
+        "isGroup": true,
+        "adminId": "019fa537-7303-7195-82a0-89b035bb9d76",
+        "allowMessages": true,
+        "allowMedia": true,
+        "allowFiles": true,
+        "allowMemberInvite": true,
+        "allowMemberEdit": false,
+        "onlyAdminCanAnnounce": false,
+        "onlyAdminCanPin": false,
+        "createdAt": "2026-08-05T06:05:04.153Z",
+        "updatedAt": "2026-08-08T13:13:37.994Z",
+        "members": [
+            {
+                "id": "019fd086-83ad-778f-b4b0-b78339589a4b",
+                "userId": "019f9b26-6507-7018-9def-5b4f940cfec8",
+                "communityId": "019fd086-8316-7768-9c41-91fe09ffdd2f",
+                "joinedAt": "2026-08-05T06:05:04.153Z",
+                "user": {
+                    "id": "019f9b26-6507-7018-9def-5b4f940cfec8",
+                    "username": "arjun_dev",
+                    "fullName": "Arjun Mehta",
+                    "avatar": "https://example.com/images/arjun.png"
+                }
+            },
+            {
+                "id": "019fd086-83ad-778f-b4b0-b98d4b656af6",
+                "userId": "019f9b25-c802-726a-ba7d-fdfe0e29a87b",
+                "communityId": "019fd086-8316-7768-9c41-91fe09ffdd2f",
+                "joinedAt": "2026-08-05T06:05:04.153Z",
+                "user": {
+                    "id": "019f9b25-c802-726a-ba7d-fdfe0e29a87b",
+                    "username": "priya_codes",
+                    "fullName": "Priya Sharma",
+                    "avatar": "https://example.com/images/priya.png"
+                }
+            },
+            {
+                "id": "019fd086-83ad-778f-b4b0-bd6eb6babee7",
+                "userId": "019f9b1e-d4ca-752e-baa8-f1fc643db4dc",
+                "communityId": "019fd086-8316-7768-9c41-91fe09ffdd2f",
+                "joinedAt": "2026-08-05T06:05:04.153Z",
+                "user": {
+                    "id": "019f9b1e-d4ca-752e-baa8-f1fc643db4dc",
+                    "username": "nagendra_dev",
+                    "fullName": "Nagendra Kumar",
+                    "avatar": "5"
+                }
+            },
+            {
+                "id": "019fd086-83ad-778f-b4b0-c3ab97fc83fa",
+                "userId": "019fa537-7303-7195-82a0-89b035bb9d76",
+                "communityId": "019fd086-8316-7768-9c41-91fe09ffdd2f",
+                "joinedAt": "2026-08-05T06:05:04.153Z",
+                "user": {
+                    "id": "019fa537-7303-7195-82a0-89b035bb9d76",
+                    "username": "viaks123",
+                    "fullName": "Vikas Singh",
+                    "avatar": "3"
+                }
+            },
+            {
+                "id": "019fd30c-abaf-77a5-8dad-13b7c62590e0",
+                "userId": "019fd2f7-e596-74be-9b53-8ba3a7adf8fb",
+                "communityId": "019fd086-8316-7768-9c41-91fe09ffdd2f",
+                "joinedAt": "2026-08-05T17:50:50.807Z",
+                "user": {
+                    "id": "019fd2f7-e596-74be-9b53-8ba3a7adf8fb",
+                    "username": "ArjunRao",
+                    "fullName": "Arjun Rao",
+                    "avatar": "5"
+                }
+            }
+        ]
+    }
+}
+
+
+Delete the community
+
+Api ={{server}}/api/v1/chat/:communityId
+input = {
+    
+}
+
+Responce = {
+    "success": true,
+    "message": "Group deleted successfully."
+}
+
+add members in community
+
+Api = {{server}}/api/v1/chat/:communityId/members  PUT
+input = {
+    "members":["019fd2f7-e596-74be-9b53-8ba3a7adf8fb"]
+}
+
+Responce = {
+    "success": false,
+    "message": "All selected users are already members.",
+    "errors": []
+}
+
+remove users  as admin 
+
+Api = {{server}}/api/v1/chat/:communityId/members  DELETE
+input ={
+    "memberId":"019fd2f7-e596-74be-9b53-8ba3a7adf8fb"
+}
+
+Responce = {
+    "statusCode": 200,
+    "data": {},
+    "message": "Member remove from the group ",
+    "success": true
+}
+
+user leaving group
+
+Api = {{server}}/api/v1/chat/:communityId/leave DELETE
+input ={
+    
+}
+
+Responce = {
+    "success": false,
+    "message": "Admin cannot leave the community. Transfer ownership or delete the community.",
+    "errors": []
+}
+
+Get the messages
+
+Api = {{server}}/api/v1/chat/:communityId/messages
+input ={
+    
+}
+
+Responce = {
+    "statusCode": 200,
+    "data": {
+        "chat": [],
+        "pagination": {
+            "limit": 20,
+            "currentPage": 1,
+            "total": 0,
+            "totalPage": 0
+        }
+    },
+    "message": "Success",
+    "success": true
+}
+
+send chat request
+
+Api = {{server}}/api/v1/chat/requests   post
+input = {
+    "userId":"019fd2f7-e596-74be-9b53-8ba3a7adf8fb"
+}
+
+Responce = {
+    "statusCode": 200,
+    "data": {
+        "id": "019fe1a1-7044-736d-983a-5ac4a2065c08",
+        "status": "PENDING",
+        "senderId": "019fa537-7303-7195-82a0-89b035bb9d76",
+        "receiverId": "019fd2f7-e596-74be-9b53-8ba3a7adf8fb",
+        "createdAt": "2026-08-08T13:48:01.477Z",
+        "updatedAt": "2026-08-08T13:48:01.477Z"
+    },
+    "message": "Request sended successfully",
+    "success": true
+}
+
+Accept the chat request
+
+Api = {{server}}/api/v1/chat/requests   put
+input = {
+    "requestId":"019fe1a1-7044-736d-983a-5ac4a2065c08",
+    "accept":true
+}
+
+Responce = {
+    "statusCode": 200,
+    "data": {
+        "id": "019fe1a2-b113-72ee-bcf0-ee407c10f1bc",
+        "members": [
+            {
+                "id": "019fe1a2-b18b-75be-a176-32519cb5e981",
+                "communityId": "019fe1a2-b113-72ee-bcf0-ee407c10f1bc",
+                "user": {
+                    "id": "019fd2f7-e596-74be-9b53-8ba3a7adf8fb",
+                    "username": "ArjunRao",
+                    "avatar": "5",
+                    "fullName": "Arjun Rao"
+                }
+            },
+            {
+                "id": "019fe1a2-b18b-75be-a176-3444537df602",
+                "communityId": "019fe1a2-b113-72ee-bcf0-ee407c10f1bc",
+                "user": {
+                    "id": "019fa537-7303-7195-82a0-89b035bb9d76",
+                    "username": "viaks123",
+                    "avatar": "3",
+                    "fullName": "Vikas Singh"
+                }
+            }
+        ]
+    },
+    "message": "Request Has Been accepted Successfully",
+    "success": true
+}
+
+
+
+
+
+
+
+now there is Some SUer Api Also which is left while making the user Api 
+
+heer are these two 
+
+search user
+
+Api = {{server}}/api/v1/users/search?username=priya
+
+Responce = {
+    "statusCode": 200,
+    "data": [
+        {
+            "username": "PriyaSharma",
+            "avatar": "2",
+            "fullName": "Priya Sharma"
+        },
+        {
+            "username": "priya_codes",
+            "avatar": "https://example.com/images/priya.png",
+            "fullName": "Priya Sharma"
+        }
+    ],
+    "message": "User fetched Successfully",
+    "success": true
+}
+
+
+get my notification
+
+Api = {{server}}/api/v1/users/notification
+input = {
+     
+}
+
+Responce = {
+    "statusCode": 200,
+    "data": [],
+    "message": "Request fetched Successfully",
+    "success": true
+}
+
+

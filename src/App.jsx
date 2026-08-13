@@ -18,6 +18,7 @@ import Profile from './pages/Profile.jsx'
 import UserProfile from './pages/UserProfile.jsx'
 import Wallet from './pages/Wallet.jsx'
 import AdminPayments from './pages/AdminPayments.jsx'
+import AdminDashboard from './pages/AdminDashboard.jsx'
 import More from './pages/More.jsx'
 import Settings from './pages/Settings.jsx'
 import Developers from './pages/Developers.jsx'
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="/u/:username" element={<UserProfile />} />
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/admin/payments" element={<AdminPayments />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/signup" element={<Signup />} />

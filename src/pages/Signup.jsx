@@ -61,7 +61,7 @@ export default function Signup() {
     bio: '',
     type: 'Student',
     github: '',
-    avatar: getAvatarOptions()[0].id,
+    avatar: getAvatarOptions()[0].id.toString(),
   })
   const [error, setError] = useState('')
   const navigate = useNavigate()
