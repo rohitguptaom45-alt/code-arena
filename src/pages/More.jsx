@@ -1,10 +1,8 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { developers } from '../data/mockData.js'
-
 const CONTACT_EMAIL = 'rohitgupta0m45@gmail.com'
 const INSTAGRAM_USERNAME = 'laracrystgc'
-
 function InstagramIcon({ className }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -22,27 +20,41 @@ function MailIcon({ className }) {
     </svg>
   )
 }
-
 const groups = {
   Support: ['Help Center', 'FAQs', 'Report a Bug'],
   Community: ['Community', 'Feedback', 'API Documentation', 'Download Mobile App'],
   Legal: ['Privacy Policy', 'Terms & Conditions'],
 }
-
 const timeline = [
-  { year: '2023', title: 'A Hostel Room Idea', text: 'Rohit and Nagender started building CodeArena over a weekend, just to make DSA practice with friends less boring.' },
-  { year: '2024', title: 'First 1,000 Coders', text: 'Weekly contests, a leaderboard, and a scrappy in-browser editor brought in our first real community.' },
-  { year: '2025', title: 'Tournaments & Chat', text: 'Added language-specific tournaments, quizzes, tutorials, and community chat so coders could learn together, not just compete.' },
-  { year: '2026', title: 'Still Building', text: 'Still run mostly by students, between classes and exams — now growing into a full learning + competition platform.' },
+  {
+    year: '2023',
+    title: 'A Hostel Room Idea',
+    text: 'Rohit and Nagender started building CodeArena over a weekend, just to make DSA practice with friends less boring.',
+  },
+  {
+    year: '2024',
+    title: 'First 1,000 Coders',
+    text: 'Weekly contests, a leaderboard, and a scrappy in-browser editor brought in our first real community.',
+  },
+  {
+    year: '2025',
+    title: 'Tournaments & Chat',
+    text: 'Added language-specific tournaments, quizzes, tutorials, and community chat so coders could learn together, not just compete.',
+  },
+  {
+    year: '2026',
+    title: 'Still Building',
+    text: 'Still run mostly by students, between classes and exams — now growing into a full learning + competition platform.',
+  },
 ]
-
 export default function More() {
   const founders = developers.slice(0, 2)
-
   return (
     <div className="max-w-5xl mx-auto px-5 py-14">
       <div className="text-center mb-14">
-        <span className="inline-block px-3 py-1 rounded-full bg-bg-soft text-xs font-medium text-ink-soft mb-4">About CodeArena</span>
+        <span className="inline-block px-3 py-1 rounded-full bg-bg-soft text-xs font-medium text-ink-soft mb-4">
+          About CodeArena
+        </span>
         <h1 className="font-display font-bold text-3xl md:text-4xl text-ink mb-4">Built by coders, for coders.</h1>
         <p className="text-ink-soft max-w-xl mx-auto text-sm leading-relaxed">
           CodeArena started as a student side-project and turned into a place where developers battle it out in
@@ -54,17 +66,24 @@ export default function More() {
         <div>
           <div className="text-2xl mb-2">🎯</div>
           <h3 className="font-display font-semibold text-ink mb-2">Our Mission</h3>
-          <p className="text-sm text-ink-soft">Make world-class competitive programming accessible to every developer, everywhere — no matter what college they're from.</p>
+          <p className="text-sm text-ink-soft">
+            Make world-class competitive programming accessible to every developer, everywhere — no matter what college
+            they're from.
+          </p>
         </div>
         <div>
           <div className="text-2xl mb-2">🔭</div>
           <h3 className="font-display font-semibold text-ink mb-2">Our Vision</h3>
-          <p className="text-sm text-ink-soft">A global arena where skill, not pedigree, decides who gets noticed, hired, and funded.</p>
+          <p className="text-sm text-ink-soft">
+            A global arena where skill, not pedigree, decides who gets noticed, hired, and funded.
+          </p>
         </div>
         <div>
           <div className="text-2xl mb-2">🚀</div>
           <h3 className="font-display font-semibold text-ink mb-2">Our Journey</h3>
-          <p className="text-sm text-ink-soft">Started in 2023 as a weekend project by two engineering students; still growing, one contest at a time.</p>
+          <p className="text-sm text-ink-soft">
+            Started in 2023 as a weekend project by two engineering students; still growing, one contest at a time.
+          </p>
         </div>
       </section>
 
@@ -72,7 +91,10 @@ export default function More() {
         <h2 className="font-display font-bold text-xl text-ink mb-6 text-center">The Founders</h2>
         <div className="grid md:grid-cols-2 gap-6">
           {founders.map((f) => (
-            <div key={f.name} className="card-lift bg-white border border-border rounded-2xl p-6 flex gap-4 items-start">
+            <div
+              key={f.name}
+              className="card-lift bg-white border border-border rounded-2xl p-6 flex gap-4 items-start"
+            >
               <div className="w-14 h-14 shrink-0 rounded-full bg-accent-soft text-white grid place-items-center text-xl font-semibold">
                 {f.name[0]}
               </div>
@@ -86,7 +108,11 @@ export default function More() {
           ))}
         </div>
         <p className="text-center text-xs text-ink-soft mt-4">
-          Meet the whole crew on the <Link to="/developers" className="text-accent hover:underline">Developers</Link> page.
+          Meet the whole crew on the{' '}
+          <Link to="/developers" className="text-accent hover:underline">
+            Developers
+          </Link>{' '}
+          page.
         </p>
       </section>
 
@@ -148,7 +174,10 @@ export default function More() {
               <h3 className="font-display font-semibold text-sm text-ink mb-3">{title}</h3>
               <div className="space-y-2">
                 {items.map((item) => (
-                  <button key={item} className="card-lift w-full text-left px-4 py-2.5 rounded-2xl border border-border text-sm text-ink-soft hover:border-accent-soft hover:text-ink">
+                  <button
+                    key={item}
+                    className="card-lift w-full text-left px-4 py-2.5 rounded-2xl border border-border text-sm text-ink-soft hover:border-accent-soft hover:text-ink"
+                  >
                     {item}
                   </button>
                 ))}

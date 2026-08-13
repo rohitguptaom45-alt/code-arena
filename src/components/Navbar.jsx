@@ -5,23 +5,50 @@ import { clearUser } from '../store/authSlice.js'
 import { getAvatarEmoji } from '../utils/auth.js'
 import SearchBar from './SearchBar.jsx'
 import NotificationBell from './NotificationBell.jsx'
-
 const navItems = [
-  { label: 'Home', to: '/' },
-  { label: 'Contests', to: '/contests' },
-  { label: 'Leaderboard', to: '/leaderboard' },
-  { label: 'Chat', to: '/chat' },
-  { label: 'Subscription', to: '/subscription' },
+  {
+    label: 'Home',
+    to: '/',
+  },
+  {
+    label: 'Contests',
+    to: '/contests',
+  },
+  {
+    label: 'Leaderboard',
+    to: '/leaderboard',
+  },
+  {
+    label: 'Chat',
+    to: '/chat',
+  },
+  {
+    label: 'Subscription',
+    to: '/subscription',
+  },
 ]
-
 const moreItems = [
-  { label: 'Code Editor, Quizzes & Tutorials', to: '/editor' },
-  { label: 'Wallet & Points', to: '/wallet' },
-  { label: 'Developers', to: '/developers' },
-  { label: 'Settings', to: '/settings' },
-  { label: 'About Us', to: '/more' },
+  {
+    label: 'Code Editor, Quizzes & Tutorials',
+    to: '/editor',
+  },
+  {
+    label: 'Wallet & Points',
+    to: '/wallet',
+  },
+  {
+    label: 'Developers',
+    to: '/developers',
+  },
+  {
+    label: 'Settings',
+    to: '/settings',
+  },
+  {
+    label: 'About Us',
+    to: '/more',
+  },
 ]
-
 export default function Navbar({ darkMode, setDarkMode }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -30,10 +57,8 @@ export default function Navbar({ darkMode, setDarkMode }) {
   const user = useSelector((state) => state.auth.user)
   const dispatch = useDispatch()
   const navigate = useNavigate()
-
   const moreRef = useRef(null)
   const profileRef = useRef(null)
-
   useEffect(() => {
     function handleClickOutside(e) {
       if (moreRef.current && !moreRef.current.contains(e.target)) setMoreOpen(false)
@@ -42,21 +67,18 @@ export default function Navbar({ darkMode, setDarkMode }) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
   const handleLogout = () => {
     dispatch(clearUser())
     setProfileOpen(false)
     setMobileOpen(false)
     navigate('/')
   }
-
   const closeAllMenus = () => {
     setMoreOpen(false)
     setMobileOpen(false)
     setMobileMoreOpen(false)
     setProfileOpen(false)
   }
-
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-border">
       <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
@@ -75,9 +97,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
-                  isActive ? 'text-accent bg-bg-soft' : 'text-ink-soft hover:text-accent hover:bg-bg-soft'
-                }`
+                `px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${isActive ? 'text-accent bg-bg-soft' : 'text-ink-soft hover:text-accent hover:bg-bg-soft'}`
               }
             >
               {item.label}
@@ -87,9 +107,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
             <button
               type="button"
               onClick={() => setMoreOpen((v) => !v)}
-              className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
-                moreOpen ? 'text-accent bg-bg-soft' : 'text-ink-soft hover:text-accent hover:bg-bg-soft'
-              }`}
+              className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${moreOpen ? 'text-accent bg-bg-soft' : 'text-ink-soft hover:text-accent hover:bg-bg-soft'}`}
             >
               More ▾
             </button>
@@ -137,7 +155,9 @@ export default function Navbar({ darkMode, setDarkMode }) {
                 <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-border rounded-2xl shadow-lift p-3 z-50">
                   <div className="px-2 pb-2 mb-2 border-b border-border">
                     <p className="text-sm font-semibold text-ink truncate">{user.fullName}</p>
-                    <p className="text-xs text-ink-soft truncate">@{user.username} · {user.type}</p>
+                    <p className="text-xs text-ink-soft truncate">
+                      @{user.username} · {user.type}
+                    </p>
                   </div>
                   <Link
                     to="/profile"
@@ -233,25 +253,46 @@ export default function Navbar({ darkMode, setDarkMode }) {
           {user ? (
             <>
               <div className="flex items-center gap-2 px-3 py-2 mt-2 border-t border-border pt-3">
-                <span className="w-8 h-8 rounded-full bg-accent-soft grid place-items-center text-base">{getAvatarEmoji(user.avatar)}</span>
+                <span className="w-8 h-8 rounded-full bg-accent-soft grid place-items-center text-base">
+                  {getAvatarEmoji(user.avatar)}
+                </span>
                 <span className="text-sm font-medium text-ink">{user.fullName}</span>
               </div>
-              <Link to="/profile" onClick={closeAllMenus} className="block px-3 py-2 rounded-xl text-sm text-ink-soft hover:bg-bg-soft">
+              <Link
+                to="/profile"
+                onClick={closeAllMenus}
+                className="block px-3 py-2 rounded-xl text-sm text-ink-soft hover:bg-bg-soft"
+              >
                 My Profile
               </Link>
-              <Link to="/settings" onClick={closeAllMenus} className="block px-3 py-2 rounded-xl text-sm text-ink-soft hover:bg-bg-soft">
+              <Link
+                to="/settings"
+                onClick={closeAllMenus}
+                className="block px-3 py-2 rounded-xl text-sm text-ink-soft hover:bg-bg-soft"
+              >
                 Settings
               </Link>
-              <button onClick={handleLogout} className="w-full text-left px-3 py-2 rounded-xl text-sm text-danger hover:bg-danger/10">
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-3 py-2 rounded-xl text-sm text-danger hover:bg-danger/10"
+              >
                 Log out
               </button>
             </>
           ) : (
             <div className="flex gap-2 pt-2">
-              <Link to="/login" onClick={closeAllMenus} className="flex-1 text-center px-4 py-2 text-sm rounded-2xl border border-border">
+              <Link
+                to="/login"
+                onClick={closeAllMenus}
+                className="flex-1 text-center px-4 py-2 text-sm rounded-2xl border border-border"
+              >
                 Login
               </Link>
-              <Link to="/signup" onClick={closeAllMenus} className="flex-1 text-center px-4 py-2 text-sm rounded-2xl bg-accent text-white">
+              <Link
+                to="/signup"
+                onClick={closeAllMenus}
+                className="flex-1 text-center px-4 py-2 text-sm rounded-2xl bg-accent text-white"
+              >
                 Sign Up
               </Link>
             </div>

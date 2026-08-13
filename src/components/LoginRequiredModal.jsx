@@ -1,6 +1,5 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-
 export default function LoginRequiredModal({ open, onClose }) {
   if (!open) return null
   return (
@@ -13,14 +12,24 @@ export default function LoginRequiredModal({ open, onClose }) {
           Please login or create an account to participate in coding contests.
         </p>
         <div className="flex gap-3">
-          <Link to="/login" onClick={onClose} className="flex-1 py-2.5 rounded-2xl border border-border text-sm font-medium text-ink hover:bg-bg-soft">
+          <Link
+            to="/login"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-2xl border border-border text-sm font-medium text-ink hover:bg-bg-soft"
+          >
             Login
           </Link>
-          <Link to="/signup" onClick={onClose} className="flex-1 py-2.5 rounded-2xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover">
+          <Link
+            to="/signup"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-2xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover"
+          >
             Create Account
           </Link>
         </div>
-        <button onClick={onClose} className="mt-4 text-xs text-ink-soft/60 hover:text-ink-soft">Maybe later</button>
+        <button onClick={onClose} className="mt-4 text-xs text-ink-soft/60 hover:text-ink-soft">
+          Maybe later
+        </button>
       </div>
     </div>
   )

@@ -1,20 +1,26 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import ContestCard from '../components/ContestCard.jsx'
 import LoginRequiredModal from '../components/LoginRequiredModal.jsx'
 import { contests as mockContests } from '../data/mockData.js'
 import { getAllContests, registerForContest } from '../utils/appData.js'
-
+import { fetchContestsRemoteFirst, joinContestRemoteFirst } from '../utils/contestApi.js'
 const filters = ['All', 'Easy', 'Medium', 'Hard']
-
 export default function Contests() {
   const user = useSelector((s) => s.auth.user)
   const [active, setActive] = useState('All')
   const [modalOpen, setModalOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const allContests = useMemo(() => getAllContests(mockContests), [])
-
+  const [remoteContests, setRemoteContests] = useState([])
+  useEffect(() => {
+    fetchContestsRemoteFirst().then((res) => setRemoteContests(res.contests))
+  }, [])
+  const allContests = useMemo(() => {
+    const local = getAllContests(mockContests)
+    const remoteIds = new Set(remoteContests.map((c) => c.id))
+    return [...remoteContests, ...local.filter((c) => !remoteIds.has(c.id))]
+  }, [remoteContests])
   const filtered = useMemo(() => {
     return allContests.filter((c) => {
       const matchesDifficulty = active === 'All' || c.difficulty === active
@@ -22,15 +28,16 @@ export default function Contests() {
       return matchesDifficulty && matchesQuery
     })
   }, [allContests, active, query])
-
-  const handleRegister = (contest) => {
+  const handleRegister = async (contest) => {
     if (!user) {
       setModalOpen(true)
       return
     }
+    if (contest.remote) {
+      await joinContestRemoteFirst(contest.id)
+    }
     registerForContest(contest.id, user.username)
   }
-
   return (
     <div className="max-w-7xl mx-auto px-5 py-14">
       <div className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
@@ -52,9 +59,7 @@ export default function Contests() {
             <button
               key={f}
               onClick={() => setActive(f)}
-              className={`px-4 py-2 rounded-2xl text-sm font-medium border transition-colors ${
-                active === f ? 'bg-accent text-white border-accent' : 'border-border text-ink-soft hover:bg-bg-soft'
-              }`}
+              className={`px-4 py-2 rounded-2xl text-sm font-medium border transition-colors ${active === f ? 'bg-accent text-white border-accent' : 'border-border text-ink-soft hover:bg-bg-soft'}`}
             >
               {f}
             </button>

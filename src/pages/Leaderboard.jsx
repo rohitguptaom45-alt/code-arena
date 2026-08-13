@@ -1,17 +1,14 @@
 import React, { useState } from 'react'
 import { leaderboard } from '../data/mockData.js'
 import FollowButton from '../components/FollowButton.jsx'
-
 const tabs = ['Weekly', 'Monthly', 'All Time']
 const medalIcon = ['🥇', '🥈', '🥉']
-
 export default function Leaderboard() {
   const [tab, setTab] = useState('Weekly')
   const top3 = leaderboard.slice(0, 3)
   const rest = leaderboard.slice(3)
   const podiumOrder = [top3[1], top3[0], top3[2]]
   const podiumHeight = ['h-28', 'h-40', 'h-24']
-
   return (
     <div className="max-w-6xl mx-auto px-5 py-14">
       <div className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
@@ -24,9 +21,7 @@ export default function Leaderboard() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                tab === t ? 'bg-white shadow-soft text-accent' : 'text-ink-soft'
-              }`}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === t ? 'bg-white shadow-soft text-accent' : 'text-ink-soft'}`}
             >
               {t}
             </button>
@@ -77,7 +72,9 @@ export default function Leaderboard() {
             <span className="font-semibold text-accent">{user.rating}</span>
             <span className="text-ink-soft">{user.solved}</span>
             <span className="text-ink-soft">{user.wins}</span>
-            <span className="justify-self-end"><FollowButton username={user.username} size="sm" /></span>
+            <span className="justify-self-end">
+              <FollowButton username={user.username} size="sm" />
+            </span>
           </div>
         ))}
       </div>

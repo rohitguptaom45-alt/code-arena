@@ -4,11 +4,14 @@ import { useDispatch } from 'react-redux'
 import { registerUserRemoteFirst, getAvatarOptions, getAvatarEmoji } from '../utils/auth.js'
 import { applySignupReferral, addNotification } from '../utils/appData.js'
 import { setUser } from '../store/authSlice.js'
-
 const accountTypes = ['Student', 'Professional', 'Freelancer', 'Recruiter']
-
 function passwordStrength(pw) {
-  if (!pw) return { label: '', pct: 0, color: 'bg-border' }
+  if (!pw)
+    return {
+      label: '',
+      pct: 0,
+      color: 'bg-border',
+    }
   let score = 0
   if (pw.length >= 6) score++
   if (pw.length >= 10) score++
@@ -16,19 +19,38 @@ function passwordStrength(pw) {
   if (/[0-9]/.test(pw)) score++
   if (/[^A-Za-z0-9]/.test(pw)) score++
   const levels = [
-    { label: 'Too short', pct: 15, color: 'bg-danger' },
-    { label: 'Weak', pct: 35, color: 'bg-danger' },
-    { label: 'Okay', pct: 55, color: 'bg-warning' },
-    { label: 'Good', pct: 75, color: 'bg-warning' },
-    { label: 'Strong', pct: 100, color: 'bg-success' },
+    {
+      label: 'Too short',
+      pct: 15,
+      color: 'bg-danger',
+    },
+    {
+      label: 'Weak',
+      pct: 35,
+      color: 'bg-danger',
+    },
+    {
+      label: 'Okay',
+      pct: 55,
+      color: 'bg-warning',
+    },
+    {
+      label: 'Good',
+      pct: 75,
+      color: 'bg-warning',
+    },
+    {
+      label: 'Strong',
+      pct: 100,
+      color: 'bg-success',
+    },
   ]
   return levels[Math.min(score, levels.length - 1)]
 }
-
 export default function Signup() {
   const [searchParams] = useSearchParams()
   const refUsername = searchParams.get('ref')
-  const [step, setStep] = useState(1) // 1 = profile details, 2 = create password
+  const [step, setStep] = useState(1)
   const [accepted, setAccepted] = useState(false)
   const [form, setForm] = useState({
     fullName: '',
@@ -44,9 +66,11 @@ export default function Signup() {
   const [error, setError] = useState('')
   const navigate = useNavigate()
   const dispatch = useDispatch()
-
-  const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
-
+  const update = (field) => (e) =>
+    setForm((f) => ({
+      ...f,
+      [field]: e.target.value,
+    }))
   const handleContinue = (e) => {
     e.preventDefault()
     setError('')
@@ -60,13 +84,10 @@ export default function Signup() {
     }
     setStep(2)
   }
-
   const [submitting, setSubmitting] = useState(false)
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-
     if (form.password.length < 6) {
       setError('Password must be at least 6 characters.')
       return
@@ -79,12 +100,10 @@ export default function Signup() {
       setError('Please accept the Terms & Conditions to continue.')
       return
     }
-
     setSubmitting(true)
     const { confirmPassword, ...userData } = form
     const result = await registerUserRemoteFirst(userData)
     setSubmitting(false)
-
     if (result.error) {
       setError(result.error)
       return
@@ -100,14 +119,15 @@ export default function Signup() {
     dispatch(setUser(result.user))
     navigate('/')
   }
-
   const strength = passwordStrength(form.password)
-
   return (
     <div className="max-w-lg mx-auto px-5 py-14">
       <h1 className="font-display font-bold text-2xl text-ink mb-1">Create your account</h1>
       <p className="text-sm text-ink-soft mb-6">
-        Already have an account? <Link to="/login" className="text-accent font-medium hover:underline">Log in</Link>
+        Already have an account?{' '}
+        <Link to="/login" className="text-accent font-medium hover:underline">
+          Log in
+        </Link>
       </p>
 
       {refUsername && (
@@ -128,8 +148,18 @@ export default function Signup() {
       {step === 1 && (
         <>
           <div className="flex gap-3 mb-6">
-            <button type="button" className="flex-1 py-2.5 rounded-2xl border border-border text-sm font-medium hover:bg-bg-soft">🔵 Google</button>
-            <button type="button" className="flex-1 py-2.5 rounded-2xl border border-border text-sm font-medium hover:bg-bg-soft">🐙 GitHub</button>
+            <button
+              type="button"
+              className="flex-1 py-2.5 rounded-2xl border border-border text-sm font-medium hover:bg-bg-soft"
+            >
+              🔵 Google
+            </button>
+            <button
+              type="button"
+              className="flex-1 py-2.5 rounded-2xl border border-border text-sm font-medium hover:bg-bg-soft"
+            >
+              🐙 GitHub
+            </button>
           </div>
           <div className="flex items-center gap-3 mb-6">
             <div className="flex-1 h-px bg-border" />
@@ -139,7 +169,9 @@ export default function Signup() {
 
           <form onSubmit={handleContinue} className="space-y-4">
             {error && (
-              <div className="px-4 py-2.5 rounded-2xl bg-danger/10 border border-danger/30 text-sm text-danger">{error}</div>
+              <div className="px-4 py-2.5 rounded-2xl bg-danger/10 border border-danger/30 text-sm text-danger">
+                {error}
+              </div>
             )}
 
             <div>
@@ -149,10 +181,13 @@ export default function Signup() {
                   <button
                     key={id}
                     type="button"
-                    onClick={() => setForm((f) => ({ ...f, avatar: id }))}
-                    className={`w-10 h-10 rounded-2xl grid place-items-center text-lg border transition-colors ${
-                      form.avatar === id ? 'border-accent bg-bg-soft' : 'border-border hover:bg-bg-soft'
-                    }`}
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        avatar: id,
+                      }))
+                    }
+                    className={`w-10 h-10 rounded-2xl grid place-items-center text-lg border transition-colors ${form.avatar === id ? 'border-accent bg-bg-soft' : 'border-border hover:bg-bg-soft'}`}
                     aria-label={`Avatar ${id}`}
                   >
                     {emoji}
@@ -205,7 +240,9 @@ export default function Signup() {
                   className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent-soft"
                 >
                   {accountTypes.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -231,7 +268,10 @@ export default function Signup() {
               />
             </div>
 
-            <button type="submit" className="w-full py-3 rounded-2xl bg-accent text-white font-semibold hover:bg-accent-hover transition-colors shadow-lift">
+            <button
+              type="submit"
+              className="w-full py-3 rounded-2xl bg-accent text-white font-semibold hover:bg-accent-hover transition-colors shadow-lift"
+            >
               Continue →
             </button>
           </form>
@@ -241,11 +281,15 @@ export default function Signup() {
       {step === 2 && (
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="px-4 py-2.5 rounded-2xl bg-danger/10 border border-danger/30 text-sm text-danger">{error}</div>
+            <div className="px-4 py-2.5 rounded-2xl bg-danger/10 border border-danger/30 text-sm text-danger">
+              {error}
+            </div>
           )}
 
           <div className="flex items-center gap-3 mb-2 px-4 py-3 rounded-2xl bg-bg-soft border border-border">
-            <span className="w-9 h-9 rounded-xl bg-white grid place-items-center text-lg">{getAvatarEmoji(form.avatar)}</span>
+            <span className="w-9 h-9 rounded-xl bg-white grid place-items-center text-lg">
+              {getAvatarEmoji(form.avatar)}
+            </span>
             <div className="text-sm">
               <div className="font-semibold text-ink">{form.fullName}</div>
               <div className="text-ink-soft text-xs">@{form.username}</div>
@@ -266,7 +310,12 @@ export default function Signup() {
             {form.password && (
               <div className="mt-2">
                 <div className="h-1.5 rounded-full bg-border overflow-hidden">
-                  <div className={`h-full ${strength.color} transition-all`} style={{ width: `${strength.pct}%` }} />
+                  <div
+                    className={`h-full ${strength.color} transition-all`}
+                    style={{
+                      width: `${strength.pct}%`,
+                    }}
+                  />
                 </div>
                 <p className="text-xs text-ink-soft mt-1">{strength.label}</p>
               </div>
@@ -291,15 +340,36 @@ export default function Signup() {
           </div>
 
           <label className="flex items-start gap-2 text-xs text-ink-soft">
-            <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="accent-accent mt-0.5" />
-            I agree to the <Link to="/more" className="text-accent hover:underline">Terms & Conditions</Link> and <Link to="/more" className="text-accent hover:underline">Privacy Policy</Link>.
+            <input
+              type="checkbox"
+              checked={accepted}
+              onChange={(e) => setAccepted(e.target.checked)}
+              className="accent-accent mt-0.5"
+            />
+            I agree to the{' '}
+            <Link to="/more" className="text-accent hover:underline">
+              Terms & Conditions
+            </Link>{' '}
+            and{' '}
+            <Link to="/more" className="text-accent hover:underline">
+              Privacy Policy
+            </Link>
+            .
           </label>
 
           <div className="flex gap-3">
-            <button type="button" onClick={() => setStep(1)} className="flex-1 py-3 rounded-2xl border border-border text-sm font-medium text-ink hover:bg-bg-soft">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="flex-1 py-3 rounded-2xl border border-border text-sm font-medium text-ink hover:bg-bg-soft"
+            >
               ← Back
             </button>
-            <button type="submit" disabled={submitting} className="flex-1 py-3 rounded-2xl bg-accent text-white font-semibold hover:bg-accent-hover transition-colors shadow-lift disabled:opacity-60">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 py-3 rounded-2xl bg-accent text-white font-semibold hover:bg-accent-hover transition-colors shadow-lift disabled:opacity-60"
+            >
               {submitting ? 'Creating…' : 'Create Account'}
             </button>
           </div>

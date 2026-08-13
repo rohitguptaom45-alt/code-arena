@@ -1,11 +1,9 @@
 import React from 'react'
 import { developers, techLogos } from '../data/mockData.js'
 import FollowButton from '../components/FollowButton.jsx'
-
 export default function Developers() {
   const leads = developers.slice(0, 2)
   const team = developers.slice(2)
-
   return (
     <div className="max-w-6xl mx-auto px-5 py-14">
       <div className="text-center mb-12">
@@ -34,15 +32,33 @@ export default function Developers() {
             <p className="text-sm text-ink-soft mt-4 leading-relaxed">{dev.bio}</p>
             <div className="flex flex-wrap gap-1.5 mt-4 mb-4">
               {dev.skills.map((s) => (
-                <span key={s} className="px-2.5 py-1 rounded-full bg-muted text-xs text-ink-soft">{s}</span>
+                <span key={s} className="px-2.5 py-1 rounded-full bg-muted text-xs text-ink-soft">
+                  {s}
+                </span>
               ))}
             </div>
             <div className="flex items-center justify-between text-xs text-ink-soft border-t border-border pt-3">
               <span>{dev.contributions} commits</span>
               <div className="flex gap-3 text-sm">
-                <a href={dev.github || '#'} target={dev.github ? '_blank' : undefined} rel="noreferrer" className="hover:text-accent">🐙</a>
-                <a href={dev.linkedin || '#'} target={dev.linkedin ? '_blank' : undefined} rel="noreferrer" className="hover:text-accent">💼</a>
-                <a href="#" className="hover:text-accent">🌐</a>
+                <a
+                  href={dev.github || '#'}
+                  target={dev.github ? '_blank' : undefined}
+                  rel="noreferrer"
+                  className="hover:text-accent"
+                >
+                  🐙
+                </a>
+                <a
+                  href={dev.linkedin || '#'}
+                  target={dev.linkedin ? '_blank' : undefined}
+                  rel="noreferrer"
+                  className="hover:text-accent"
+                >
+                  💼
+                </a>
+                <a href="#" className="hover:text-accent">
+                  🌐
+                </a>
               </div>
             </div>
           </div>
@@ -63,16 +79,24 @@ export default function Developers() {
             </div>
             <div className="flex flex-wrap justify-center gap-1.5 mb-3">
               {dev.skills.map((s) => (
-                <span key={s} className="px-2 py-0.5 rounded-full bg-muted text-xs text-ink-soft">{s}</span>
+                <span key={s} className="px-2 py-0.5 rounded-full bg-muted text-xs text-ink-soft">
+                  {s}
+                </span>
               ))}
             </div>
             <div className="flex justify-center gap-4 text-xs text-ink-soft mb-3">
               <span>{dev.contributions} commits</span>
             </div>
             <div className="flex justify-center gap-3 text-sm">
-              <a href="#" className="hover:text-accent">🐙</a>
-              <a href="#" className="hover:text-accent">💼</a>
-              <a href="#" className="hover:text-accent">🌐</a>
+              <a href="#" className="hover:text-accent">
+                🐙
+              </a>
+              <a href="#" className="hover:text-accent">
+                💼
+              </a>
+              <a href="#" className="hover:text-accent">
+                🌐
+              </a>
             </div>
           </div>
         ))}
@@ -82,7 +106,9 @@ export default function Developers() {
         <h2 className="font-display font-bold text-xl text-ink mb-6">Our Tech Stack</h2>
         <div className="flex flex-wrap justify-center gap-3">
           {techLogos.map((t) => (
-            <span key={t} className="px-4 py-2 rounded-2xl border border-border text-sm text-ink-soft">{t}</span>
+            <span key={t} className="px-4 py-2 rounded-2xl border border-border text-sm text-ink-soft">
+              {t}
+            </span>
           ))}
         </div>
       </section>

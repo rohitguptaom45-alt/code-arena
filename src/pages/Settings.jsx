@@ -1,16 +1,19 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { updateProfileRemoteFirst, changePasswordRemoteFirst, getAvatarOptions } from '../utils/auth.js'
+import {
+  updateProfileRemoteFirst,
+  changeAvatarRemoteFirst,
+  changePasswordRemoteFirst,
+  getAvatarOptions,
+} from '../utils/auth.js'
 import { getStoredTheme, applyTheme } from '../utils/theme.js'
 import { updateUser, clearUser } from '../store/authSlice.js'
 import { getFollowCounts } from '../utils/appData.js'
-
 const sections = ['Profile', 'Account', 'Security', 'Privacy & Safety', 'Notifications', 'Appearance', 'Contact Us']
 const accountTypes = ['Student', 'Professional', 'Freelancer', 'Recruiter']
 const CONTACT_EMAIL = 'rohitgupta0m45@gmail.com'
 const INSTAGRAM_USERNAME = 'laracrystgc'
-
 function InstagramIcon({ className }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -28,7 +31,6 @@ function MailIcon({ className }) {
     </svg>
   )
 }
-
 export default function Settings() {
   const [active, setActive] = useState('Profile')
   const [darkMode, setDarkMode] = useState(getStoredTheme() === 'dark')
@@ -36,34 +38,54 @@ export default function Settings() {
   const user = useSelector((state) => state.auth.user)
   const dispatch = useDispatch()
   const [form, setForm] = useState(
-    user ? { fullName: user.fullName, bio: user.bio, type: user.type, github: user.github, avatar: user.avatar } : null
+    user
+      ? {
+          fullName: user.fullName,
+          bio: user.bio,
+          type: user.type,
+          github: user.github,
+          avatar: user.avatar,
+        }
+      : null
   )
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
-
-  const [pwForm, setPwForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' })
+  const [pwForm, setPwForm] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  })
   const [pwError, setPwError] = useState('')
   const [pwSuccess, setPwSuccess] = useState('')
   const [pwSubmitting, setPwSubmitting] = useState(false)
-
   if (!user) {
     return (
       <div className="max-w-md mx-auto px-5 py-24 text-center">
         <div className="text-4xl mb-4">🔒</div>
         <h1 className="font-display font-bold text-xl text-ink mb-2">You're not logged in</h1>
-        <p className="text-sm text-ink-soft mb-6">Log in to manage your profile, security, and notification settings.</p>
-        <Link to="/login" className="inline-block px-5 py-2.5 rounded-2xl bg-accent text-white font-semibold text-sm hover:bg-accent-hover">
+        <p className="text-sm text-ink-soft mb-6">
+          Log in to manage your profile, security, and notification settings.
+        </p>
+        <Link
+          to="/login"
+          className="inline-block px-5 py-2.5 rounded-2xl bg-accent text-white font-semibold text-sm hover:bg-accent-hover"
+        >
           Log In
         </Link>
       </div>
     )
   }
-
-  const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+  const update = (field) => (e) =>
+    setForm((f) => ({
+      ...f,
+      [field]: e.target.value,
+    }))
   const followCounts = getFollowCounts(user.username)
-
   const handleSave = async () => {
     setSaving(true)
+    if (form.avatar !== user.avatar) {
+      await changeAvatarRemoteFirst(user.username, form.avatar)
+    }
     const result = await updateProfileRemoteFirst(user.username, form)
     setSaving(false)
     if (result.user) {
@@ -72,15 +94,12 @@ export default function Settings() {
       setTimeout(() => setSaved(false), 2000)
     }
   }
-
   const handleToggleDarkMode = () => {
     const next = !darkMode
     setDarkMode(next)
     applyTheme(next ? 'dark' : 'light')
   }
-
   const handleLogout = () => dispatch(clearUser())
-
   const handleChangePassword = async (e) => {
     e.preventDefault()
     setPwError('')
@@ -101,9 +120,12 @@ export default function Settings() {
       return
     }
     setPwSuccess('Password updated.')
-    setPwForm({ oldPassword: '', newPassword: '', confirmPassword: '' })
+    setPwForm({
+      oldPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    })
   }
-
   return (
     <div className="max-w-5xl mx-auto px-5 py-14 grid md:grid-cols-[220px_1fr] gap-8">
       <aside className="space-y-1">
@@ -111,9 +133,7 @@ export default function Settings() {
           <button
             key={s}
             onClick={() => setActive(s)}
-            className={`w-full text-left px-4 py-2.5 rounded-2xl text-sm font-medium transition-colors ${
-              active === s ? 'bg-accent text-white' : 'text-ink-soft hover:bg-bg-soft'
-            }`}
+            className={`w-full text-left px-4 py-2.5 rounded-2xl text-sm font-medium transition-colors ${active === s ? 'bg-accent text-white' : 'text-ink-soft hover:bg-bg-soft'}`}
           >
             {s}
           </button>
@@ -143,7 +163,10 @@ export default function Settings() {
                 <div className="font-display font-bold text-lg text-ink">{followCounts.following}</div>
                 <div className="text-[11px] text-ink-soft">Following</div>
               </div>
-              <Link to="/profile" className="border border-dashed border-border rounded-2xl px-4 py-3 text-center text-xs text-accent font-medium flex items-center hover:bg-bg-soft">
+              <Link
+                to="/profile"
+                className="border border-dashed border-border rounded-2xl px-4 py-3 text-center text-xs text-accent font-medium flex items-center hover:bg-bg-soft"
+              >
                 View full profile →
               </Link>
             </div>
@@ -154,10 +177,13 @@ export default function Settings() {
                 {getAvatarOptions().map(({ id, emoji }) => (
                   <button
                     key={id}
-                    onClick={() => setForm((f) => ({ ...f, avatar: id }))}
-                    className={`w-10 h-10 rounded-2xl grid place-items-center text-lg border transition-colors ${
-                      form.avatar === id ? 'border-accent bg-bg-soft' : 'border-border hover:bg-bg-soft'
-                    }`}
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        avatar: id,
+                      }))
+                    }
+                    className={`w-10 h-10 rounded-2xl grid place-items-center text-lg border transition-colors ${form.avatar === id ? 'border-accent bg-bg-soft' : 'border-border hover:bg-bg-soft'}`}
                   >
                     {emoji}
                   </button>
@@ -167,34 +193,64 @@ export default function Settings() {
 
             <div>
               <label className="text-xs font-semibold text-ink-soft block mb-1.5">Display Name</label>
-              <input value={form.fullName} onChange={update('fullName')} className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm" />
+              <input
+                value={form.fullName}
+                onChange={update('fullName')}
+                className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm"
+              />
             </div>
 
             <div>
               <label className="text-xs font-semibold text-ink-soft block mb-1.5">Username</label>
-              <input value={user.username} disabled className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm bg-muted text-ink-soft" />
+              <input
+                value={user.username}
+                disabled
+                className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm bg-muted text-ink-soft"
+              />
               <p className="text-[11px] text-ink-soft mt-1">Usernames can't be changed after signup.</p>
             </div>
 
             <div>
               <label className="text-xs font-semibold text-ink-soft block mb-1.5">I am a</label>
-              <select value={form.type} onChange={update('type')} className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm bg-white">
-                {accountTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+              <select
+                value={form.type}
+                onChange={update('type')}
+                className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm bg-white"
+              >
+                {accountTypes.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
               <label className="text-xs font-semibold text-ink-soft block mb-1.5">GitHub Username</label>
-              <input value={form.github} onChange={update('github')} placeholder="your-github-handle" className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm" />
+              <input
+                value={form.github}
+                onChange={update('github')}
+                placeholder="your-github-handle"
+                className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm"
+              />
             </div>
 
             <div>
               <label className="text-xs font-semibold text-ink-soft block mb-1.5">Bio</label>
-              <textarea value={form.bio} onChange={update('bio')} rows={3} className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm resize-none" />
+              <textarea
+                value={form.bio}
+                onChange={update('bio')}
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm resize-none"
+              />
             </div>
 
             <div className="flex items-center gap-3">
-              <button onClick={handleSave} disabled={saving} className="px-5 py-2.5 rounded-2xl bg-accent text-white font-semibold text-sm hover:bg-accent-hover disabled:opacity-60">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-5 py-2.5 rounded-2xl bg-accent text-white font-semibold text-sm hover:bg-accent-hover disabled:opacity-60"
+              >
                 {saving ? 'Saving…' : 'Save Changes'}
               </button>
               {saved && <span className="text-xs text-success font-medium">✓ Saved</span>}
@@ -207,17 +263,27 @@ export default function Settings() {
             <h2 className="font-display font-bold text-xl text-ink mb-4">Account</h2>
             <div>
               <label className="text-xs font-semibold text-ink-soft block mb-1.5">Username</label>
-              <input value={user.username} disabled className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm bg-muted text-ink-soft" />
+              <input
+                value={user.username}
+                disabled
+                className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm bg-muted text-ink-soft"
+              />
             </div>
             <div>
               <label className="text-xs font-semibold text-ink-soft block mb-1.5">Account Type</label>
-              <input value={user.type} disabled className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm bg-muted text-ink-soft" />
+              <input
+                value={user.type}
+                disabled
+                className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm bg-muted text-ink-soft"
+              />
             </div>
             <div>
               <label className="text-xs font-semibold text-ink-soft block mb-1.5">Payment Methods</label>
               <div className="border border-border rounded-2xl px-4 py-3 text-sm text-ink-soft flex justify-between items-center">
                 <span>No payment method on file</span>
-                <Link to="/subscription" className="text-xs text-accent">Add</Link>
+                <Link to="/subscription" className="text-xs text-accent">
+                  Add
+                </Link>
               </div>
             </div>
           </div>
@@ -235,7 +301,12 @@ export default function Settings() {
                 type="password"
                 required
                 value={pwForm.oldPassword}
-                onChange={(e) => setPwForm((f) => ({ ...f, oldPassword: e.target.value }))}
+                onChange={(e) =>
+                  setPwForm((f) => ({
+                    ...f,
+                    oldPassword: e.target.value,
+                  }))
+                }
                 placeholder="Current password"
                 className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm"
               />
@@ -243,7 +314,12 @@ export default function Settings() {
                 type="password"
                 required
                 value={pwForm.newPassword}
-                onChange={(e) => setPwForm((f) => ({ ...f, newPassword: e.target.value }))}
+                onChange={(e) =>
+                  setPwForm((f) => ({
+                    ...f,
+                    newPassword: e.target.value,
+                  }))
+                }
                 placeholder="New password"
                 className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm"
               />
@@ -251,15 +327,25 @@ export default function Settings() {
                 type="password"
                 required
                 value={pwForm.confirmPassword}
-                onChange={(e) => setPwForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+                onChange={(e) =>
+                  setPwForm((f) => ({
+                    ...f,
+                    confirmPassword: e.target.value,
+                  }))
+                }
                 placeholder="Confirm new password"
                 className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm"
               />
-              <button type="submit" disabled={pwSubmitting} className="px-4 py-2 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover disabled:opacity-60">
+              <button
+                type="submit"
+                disabled={pwSubmitting}
+                className="px-4 py-2 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover disabled:opacity-60"
+              >
                 {pwSubmitting ? 'Updating…' : 'Update Password'}
               </button>
               <p className="text-[11px] text-ink-soft">
-                This calls the CodeArena backend's password-change endpoint. If it isn't running locally, this will show an error rather than silently pretending to succeed.
+                This calls the CodeArena backend's password-change endpoint. If it isn't running locally, this will show
+                an error rather than silently pretending to succeed.
               </p>
             </form>
 
@@ -272,7 +358,9 @@ export default function Settings() {
                 onClick={() => setTwoFA(!twoFA)}
                 className={`w-12 h-7 rounded-full transition-colors relative ${twoFA ? 'bg-accent' : 'bg-border'}`}
               >
-                <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-all ${twoFA ? 'translate-x-[22px]' : 'left-0.5'}`} />
+                <span
+                  className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-all ${twoFA ? 'translate-x-[22px]' : 'left-0.5'}`}
+                />
               </button>
             </div>
             <div>
@@ -291,13 +379,18 @@ export default function Settings() {
           <div className="max-w-lg space-y-6">
             <div>
               <h2 className="font-display font-bold text-xl text-ink mb-2">Privacy & Safety</h2>
-              <p className="text-sm text-ink-soft">How your data and activity are handled on CodeArena, and what's expected of everyone using it.</p>
+              <p className="text-sm text-ink-soft">
+                How your data and activity are handled on CodeArena, and what's expected of everyone using it.
+              </p>
             </div>
 
             <div>
               <h3 className="text-sm font-semibold text-ink mb-2">Who can see what</h3>
               <ul className="text-sm text-ink-soft space-y-2 list-disc pl-5">
-                <li>Your username, avatar, streak, points, and contest results are public on the Leaderboard and your Profile.</li>
+                <li>
+                  Your username, avatar, streak, points, and contest results are public on the Leaderboard and your
+                  Profile.
+                </li>
                 <li>Your email, phone number, and password are never shown to other users.</li>
                 <li>Direct messages are only visible to you and the person you're messaging.</li>
                 <li>Contest submissions may be reviewed by contest hosts for plagiarism checks.</li>
@@ -307,7 +400,10 @@ export default function Settings() {
             <div>
               <h3 className="text-sm font-semibold text-ink mb-2">Fair play rules</h3>
               <ul className="text-sm text-ink-soft space-y-2 list-disc pl-5">
-                <li>No plagiarism — submitting someone else's solution as your own gets you disqualified from that contest.</li>
+                <li>
+                  No plagiarism — submitting someone else's solution as your own gets you disqualified from that
+                  contest.
+                </li>
                 <li>No multi-accounting to farm points, referral bonuses, or leaderboard rank.</li>
                 <li>No sharing paid contest problems or solutions before the contest window ends.</li>
                 <li>Referral and points abuse (fake accounts, self-referrals) will result in points being reversed.</li>
@@ -327,9 +423,15 @@ export default function Settings() {
             <div>
               <h3 className="text-sm font-semibold text-ink mb-2">Your data</h3>
               <ul className="text-sm text-ink-soft space-y-2 list-disc pl-5">
-                <li>Account and activity data is stored to power your profile, streak, and points — never sold to third parties.</li>
+                <li>
+                  Account and activity data is stored to power your profile, streak, and points — never sold to third
+                  parties.
+                </li>
                 <li>You can request account deletion at any time from the Account tab.</li>
-                <li>Payment verification details (UTR/reference numbers) are used only to confirm your subscription payment.</li>
+                <li>
+                  Payment verification details (UTR/reference numbers) are used only to confirm your subscription
+                  payment.
+                </li>
               </ul>
             </div>
           </div>
@@ -339,7 +441,10 @@ export default function Settings() {
           <div className="max-w-md space-y-3">
             <h2 className="font-display font-bold text-xl text-ink mb-4">Notifications</h2>
             {['Contest reminders', 'Leaderboard updates', 'Product announcements'].map((n) => (
-              <label key={n} className="flex items-center justify-between text-sm text-ink-soft border-b border-border pb-3">
+              <label
+                key={n}
+                className="flex items-center justify-between text-sm text-ink-soft border-b border-border pb-3"
+              >
                 {n}
                 <input type="checkbox" defaultChecked className="accent-accent" />
               </label>
@@ -359,7 +464,9 @@ export default function Settings() {
                 onClick={handleToggleDarkMode}
                 className={`w-12 h-7 rounded-full transition-colors relative ${darkMode ? 'bg-accent' : 'bg-border'}`}
               >
-                <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-all ${darkMode ? 'translate-x-[22px]' : 'left-0.5'}`} />
+                <span
+                  className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-all ${darkMode ? 'translate-x-[22px]' : 'left-0.5'}`}
+                />
               </button>
             </div>
           </div>

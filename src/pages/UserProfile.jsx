@@ -4,13 +4,11 @@ import { useSelector } from 'react-redux'
 import FollowButton from '../components/FollowButton.jsx'
 import { getUserByUsername, getFollowCounts } from '../utils/appData.js'
 import { getAvatarEmoji } from '../utils/auth.js'
-
 export default function UserProfile() {
   const { username } = useParams()
   const navigate = useNavigate()
   const currentUser = useSelector((s) => s.auth.user)
   const profile = getUserByUsername(username)
-
   if (!profile) {
     return (
       <div className="max-w-md mx-auto px-5 py-24 text-center">
@@ -25,37 +23,65 @@ export default function UserProfile() {
       </div>
     )
   }
-
   if (currentUser && currentUser.username === profile.username) {
     return (
       <div className="max-w-md mx-auto px-5 py-24 text-center">
         <h1 className="font-display font-bold text-2xl text-ink mb-2">This is you!</h1>
         <p className="text-sm text-ink-soft mb-6">Head to your own profile to manage stats and settings.</p>
-        <Link to="/profile" className="px-6 py-2.5 rounded-2xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover">
+        <Link
+          to="/profile"
+          className="px-6 py-2.5 rounded-2xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover"
+        >
           Go to my profile
         </Link>
       </div>
     )
   }
-
   const followCounts = getFollowCounts(profile.username)
   const stats = [
-    { label: 'Problems Solved', value: profile.problemsSolved || 0, icon: '🧩' },
-    { label: 'Contests Participated', value: (profile.contestsParticipated || []).length, icon: '🏁' },
-    { label: 'Contests Won', value: profile.contestsWon || 0, icon: '🏆' },
-    { label: 'Followers', value: followCounts.followers, icon: '👥' },
-    { label: 'Following', value: followCounts.following, icon: '➕' },
-    { label: 'Longest Streak', value: profile.streakLongest || 0, icon: '🔥' },
+    {
+      label: 'Problems Solved',
+      value: profile.problemsSolved || 0,
+      icon: '🧩',
+    },
+    {
+      label: 'Contests Participated',
+      value: (profile.contestsParticipated || []).length,
+      icon: '🏁',
+    },
+    {
+      label: 'Contests Won',
+      value: profile.contestsWon || 0,
+      icon: '🏆',
+    },
+    {
+      label: 'Followers',
+      value: followCounts.followers,
+      icon: '👥',
+    },
+    {
+      label: 'Following',
+      value: followCounts.following,
+      icon: '➕',
+    },
+    {
+      label: 'Longest Streak',
+      value: profile.streakLongest || 0,
+      icon: '🔥',
+    },
   ]
-
   return (
     <div className="max-w-4xl mx-auto px-5 py-14">
       <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
         <div className="flex items-center gap-4">
-          <span className="w-20 h-20 rounded-3xl bg-accent-soft grid place-items-center text-4xl">{getAvatarEmoji(profile.avatar)}</span>
+          <span className="w-20 h-20 rounded-3xl bg-accent-soft grid place-items-center text-4xl">
+            {getAvatarEmoji(profile.avatar)}
+          </span>
           <div>
             <h1 className="font-display font-bold text-2xl text-ink">{profile.fullName}</h1>
-            <p className="text-ink-soft text-sm">@{profile.username} · {profile.type}</p>
+            <p className="text-ink-soft text-sm">
+              @{profile.username} · {profile.type}
+            </p>
             {profile.github && (
               <a
                 href={profile.github.startsWith('http') ? profile.github : `https://github.com/${profile.github}`}
@@ -68,7 +94,7 @@ export default function UserProfile() {
             )}
           </div>
         </div>
-        <FollowButton username={profile.username} />
+        <FollowButton username={profile.username} remoteId={profile.remoteId} />
       </div>
 
       {profile.bio && <p className="text-sm text-ink-soft mb-8 border-l-2 border-accent pl-3">{profile.bio}</p>}

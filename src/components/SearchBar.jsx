@@ -3,22 +3,25 @@ import { useNavigate } from 'react-router-dom'
 import { searchAll } from '../utils/appData.js'
 import { contests as mockContests } from '../data/mockData.js'
 import { getAvatarEmoji } from '../utils/auth.js'
-
 export default function SearchBar({ variant = 'desktop', onNavigate }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState({ users: [], contests: [] })
+  const [results, setResults] = useState({
+    users: [],
+    contests: [],
+  })
   const ref = useRef(null)
   const navigate = useNavigate()
-
   useEffect(() => {
     if (!query.trim()) {
-      setResults({ users: [], contests: [] })
+      setResults({
+        users: [],
+        contests: [],
+      })
       return
     }
     setResults(searchAll(query, mockContests))
   }, [query])
-
   useEffect(() => {
     function handleClickOutside(e) {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false)
@@ -26,17 +29,14 @@ export default function SearchBar({ variant = 'desktop', onNavigate }) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
   const go = (path) => {
     setOpen(false)
     setQuery('')
     navigate(path)
     if (onNavigate) onNavigate()
   }
-
   const hasResults = results.users.length > 0 || results.contests.length > 0
   const showDropdown = open && query.trim().length > 0
-
   return (
     <div className={`relative ${variant === 'mobile' ? 'w-full' : 'w-64'}`} ref={ref}>
       <div className="relative">
@@ -94,7 +94,9 @@ export default function SearchBar({ variant = 'desktop', onNavigate }) {
                       </span>
                       <span className="min-w-0">
                         <span className="block text-sm text-ink font-medium truncate">{c.name}</span>
-                        <span className="block text-xs text-ink-soft truncate">{c.difficulty} · {c.duration}</span>
+                        <span className="block text-xs text-ink-soft truncate">
+                          {c.difficulty} · {c.duration}
+                        </span>
                       </span>
                     </button>
                   ))}

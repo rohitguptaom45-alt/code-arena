@@ -1,19 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  getNotifications,
-  getUnreadCount,
-  markAllNotificationsRead,
-  markNotificationRead,
-} from '../utils/appData.js'
-
+import { getNotifications, getUnreadCount, markAllNotificationsRead, markNotificationRead } from '../utils/appData.js'
 const TYPE_ICON = {
   follow: '👥',
   contest: '🏁',
   welcome: '👋',
   info: '🔔',
 }
-
 function timeAgo(iso) {
   const diffMs = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diffMs / 60000)
@@ -24,23 +17,17 @@ function timeAgo(iso) {
   const days = Math.floor(hours / 24)
   return `${days}d ago`
 }
-
 export default function NotificationBell({ username }) {
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const ref = useRef(null)
   const navigate = useNavigate()
-
   const refresh = () => setNotifications(getNotifications(username))
-
   useEffect(() => {
     refresh()
-    // Pick up notifications generated elsewhere in the app (e.g. someone follows you)
     const interval = setInterval(refresh, 4000)
     return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username])
-
   useEffect(() => {
     function handleClickOutside(e) {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false)
@@ -48,26 +35,21 @@ export default function NotificationBell({ username }) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
   const unread = notifications.filter((n) => !n.read).length
-
   const handleOpen = () => {
     setOpen((v) => !v)
     refresh()
   }
-
   const handleItemClick = (n) => {
     markNotificationRead(n.id)
     refresh()
     setOpen(false)
     if (n.link) navigate(n.link)
   }
-
   const handleMarkAllRead = () => {
     markAllNotificationsRead(username)
     refresh()
   }
-
   return (
     <div className="relative" ref={ref}>
       <button
@@ -102,9 +84,7 @@ export default function NotificationBell({ username }) {
                 <button
                   key={n.id}
                   onClick={() => handleItemClick(n)}
-                  className={`w-full text-left flex items-start gap-2.5 px-2.5 py-2.5 rounded-xl transition-colors ${
-                    n.read ? 'hover:bg-bg-soft' : 'bg-accent-soft/15 hover:bg-accent-soft/25'
-                  }`}
+                  className={`w-full text-left flex items-start gap-2.5 px-2.5 py-2.5 rounded-xl transition-colors ${n.read ? 'hover:bg-bg-soft' : 'bg-accent-soft/15 hover:bg-accent-soft/25'}`}
                 >
                   <span className="text-lg leading-none mt-0.5">{TYPE_ICON[n.type] || '🔔'}</span>
                   <span className="flex-1 min-w-0">

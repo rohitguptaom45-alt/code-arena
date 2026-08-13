@@ -1,6 +1,5 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-
 export default function NotFound() {
   return (
     <div className="max-w-md mx-auto px-5 py-32 text-center">

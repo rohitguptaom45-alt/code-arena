@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
-
 export default function StatCounter({ target, suffix = '', label, duration = 1500 }) {
   const [value, setValue] = useState(0)
   const ref = useRef(null)
   const started = useRef(false)
-
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -21,12 +19,13 @@ export default function StatCounter({ target, suffix = '', label, duration = 150
           requestAnimationFrame(step)
         }
       },
-      { threshold: 0.3 }
+      {
+        threshold: 0.3,
+      }
     )
     if (ref.current) observer.observe(ref.current)
     return () => observer.disconnect()
   }, [target, duration])
-
   return (
     <div ref={ref} className="text-center">
       <div className="font-display font-extrabold text-3xl md:text-4xl text-ink">

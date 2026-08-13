@@ -1,19 +1,31 @@
 import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
+import { useSearchParams } from 'react-router-dom'
 import Editor from '@monaco-editor/react'
 import { quizzes, tutorials } from '../data/mockData.js'
 import { problemBank } from '../data/problems.js'
-import { recordProblemSolved } from '../utils/appData.js'
-
+import { recordProblemSolved, addSubmission, getSubmissions } from '../utils/appData.js'
+import { fetchProblemRemote, fetchProblemTestCasesRemote, fetchPreloadedCodeRemote } from '../utils/problemApi.js'
+import DiscussionPanel from '../components/DiscussionPanel.jsx'
 const modes = [
-  { id: 'compiler', label: '💻 Compiler', desc: 'Write & run code' },
-  { id: 'quizzes', label: '🧠 Quizzes', desc: 'Test your knowledge' },
-  { id: 'tutorials', label: '📘 Tutorials', desc: 'Learn step by step' },
+  {
+    id: 'compiler',
+    label: '💻 Compiler',
+    desc: 'Write & run code',
+  },
+  {
+    id: 'quizzes',
+    label: '🧠 Quizzes',
+    desc: 'Test your knowledge',
+  },
+  {
+    id: 'tutorials',
+    label: '📘 Tutorials',
+    desc: 'Learn step by step',
+  },
 ]
-
 export default function CodeEditor() {
   const [mode, setMode] = useState('compiler')
-
   return (
     <div className="bg-white">
       <div className="border-b border-border bg-bg-soft/60">
@@ -22,9 +34,7 @@ export default function CodeEditor() {
             <button
               key={m.id}
               onClick={() => setMode(m.id)}
-              className={`px-5 py-3.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
-                mode === m.id ? 'border-accent text-accent' : 'border-transparent text-ink-soft hover:text-ink'
-              }`}
+              className={`px-5 py-3.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${mode === m.id ? 'border-accent text-accent' : 'border-transparent text-ink-soft hover:text-ink'}`}
             >
               {m.label}
             </button>
@@ -38,56 +48,77 @@ export default function CodeEditor() {
     </div>
   )
 }
-
 const languages = [
-  { id: 'javascript', label: 'JavaScript' },
-  { id: 'python', label: 'Python' },
-  { id: 'java', label: 'Java' },
-  { id: 'cpp', label: 'C++' },
+  {
+    id: 'javascript',
+    label: 'JavaScript',
+  },
+  {
+    id: 'python',
+    label: 'Python',
+  },
+  {
+    id: 'java',
+    label: 'Java',
+  },
+  {
+    id: 'cpp',
+    label: 'C++',
+  },
 ]
-
-const MONACO_LANG = { javascript: 'javascript', python: 'python', java: 'java', cpp: 'cpp' }
-
-const GRADED_LANGUAGES = ['javascript', 'python'] // languages with a real auto-grader wired up
-
+const MONACO_LANG = {
+  javascript: 'javascript',
+  python: 'python',
+  java: 'java',
+  cpp: 'cpp',
+}
+const GRADED_LANGUAGES = ['javascript', 'python']
 function deepClone(v) {
   return JSON.parse(JSON.stringify(v))
 }
-
-// Sorts every array level so triplets/groups/etc. can be compared regardless of order.
 function normalize(v) {
   if (Array.isArray(v)) {
     return v.map(normalize).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
   }
   return v
 }
-
 function valuesMatch(actual, expected, unordered) {
   if (unordered) return JSON.stringify(normalize(actual)) === JSON.stringify(normalize(expected))
   return JSON.stringify(actual) === JSON.stringify(expected)
 }
-
-// ---- JavaScript: real function-call harness, runs directly in the browser ----
 function runJsAgainstTests(code, problem) {
   let solveFn
   try {
-    // eslint-disable-next-line no-new-func
-    solveFn = new Function(`${code}\nif (typeof solve !== 'function') { throw new Error("Define a function named solve(${problem.params.join(', ')})."); }\nreturn solve;`)()
+    solveFn = new Function(
+      `${code}\nif (typeof solve !== 'function') { throw new Error("Define a function named solve(${problem.params.join(', ')})."); }\nreturn solve;`
+    )()
   } catch (err) {
-    return { compileError: err.message }
+    return {
+      compileError: err.message,
+    }
   }
   const results = problem.testCases.map((tc) => {
     try {
       const actual = solveFn(...tc.args.map(deepClone))
-      return { pass: valuesMatch(actual, tc.expected, problem.unordered), actual, expected: tc.expected, args: tc.args }
+      return {
+        pass: valuesMatch(actual, tc.expected, problem.unordered),
+        actual,
+        expected: tc.expected,
+        args: tc.args,
+      }
     } catch (err) {
-      return { pass: false, actual: `Runtime error: ${err.message}`, expected: tc.expected, args: tc.args }
+      return {
+        pass: false,
+        actual: `Runtime error: ${err.message}`,
+        expected: tc.expected,
+        args: tc.args,
+      }
     }
   })
-  return { results }
+  return {
+    results,
+  }
 }
-
-// ---- Python: real function-call harness, executed remotely via Piston, one call per test case ----
 async function runPythonAgainstTests(code, problem) {
   const results = []
   for (const tc of problem.testCases) {
@@ -104,28 +135,45 @@ except Exception as e:
 `
     const res = await runViaPiston('python', driver, '')
     if (res.error) {
-      results.push({ pass: false, actual: `Error: ${res.error}`, expected: tc.expected, args: tc.args })
+      results.push({
+        pass: false,
+        actual: `Error: ${res.error}`,
+        expected: tc.expected,
+        args: tc.args,
+      })
       continue
     }
     const line = (res.output || '').trim().split('\n').pop()
     if (line.startsWith('__OK__')) {
       try {
         const actual = JSON.parse(line.slice(6))
-        results.push({ pass: valuesMatch(actual, tc.expected, problem.unordered), actual, expected: tc.expected, args: tc.args })
+        results.push({
+          pass: valuesMatch(actual, tc.expected, problem.unordered),
+          actual,
+          expected: tc.expected,
+          args: tc.args,
+        })
       } catch {
-        results.push({ pass: false, actual: line, expected: tc.expected, args: tc.args })
+        results.push({
+          pass: false,
+          actual: line,
+          expected: tc.expected,
+          args: tc.args,
+        })
       }
     } else {
-      results.push({ pass: false, actual: line.replace('__ERR__', 'Runtime error: ') || '(no output)', expected: tc.expected, args: tc.args })
+      results.push({
+        pass: false,
+        actual: line.replace('__ERR__', 'Runtime error: ') || '(no output)',
+        expected: tc.expected,
+        args: tc.args,
+      })
     }
   }
-  return { results }
+  return {
+    results,
+  }
 }
-
-// ---- Java / C++ / Python: executed via Piston. Runtime versions are fetched from Piston
-// itself (rather than hardcoded) because Piston requires an exact version match and its
-// available versions change over time — a stale hardcoded version is the #1 reason a
-// language "stops working" with this API. We resolve once and cache in memory.
 const PISTON_ALIASES = {
   python: ['python', 'python3'],
   java: ['java'],
@@ -133,7 +181,6 @@ const PISTON_ALIASES = {
 }
 let runtimesCache = null
 let runtimesCacheAt = 0
-
 async function getRuntimes() {
   if (runtimesCache && Date.now() - runtimesCacheAt < 10 * 60 * 1000) return runtimesCache
   const res = await fetch('https://emkc.org/api/v2/piston/runtimes')
@@ -142,49 +189,91 @@ async function getRuntimes() {
   runtimesCacheAt = Date.now()
   return runtimesCache
 }
-
 async function resolveRuntime(languageId) {
   const wanted = PISTON_ALIASES[languageId] || [languageId]
   try {
     const runtimes = await getRuntimes()
     const match = runtimes.find((r) => wanted.includes(r.language) || (r.aliases || []).some((a) => wanted.includes(a)))
-    if (match) return { language: match.language, version: match.version }
-  } catch {
-    // fall through to a best-effort static guess below if the runtime list itself is unreachable
+    if (match)
+      return {
+        language: match.language,
+        version: match.version,
+      }
+  } catch {}
+  const fallback = {
+    python: {
+      language: 'python',
+      version: '3.10.0',
+    },
+    java: {
+      language: 'java',
+      version: '15.0.2',
+    },
+    cpp: {
+      language: 'c++',
+      version: '10.2.0',
+    },
   }
-  const fallback = { python: { language: 'python', version: '3.10.0' }, java: { language: 'java', version: '15.0.2' }, cpp: { language: 'c++', version: '10.2.0' } }
   return fallback[languageId] || null
 }
-
 async function runViaPiston(languageId, code, stdin) {
   const runtime = await resolveRuntime(languageId)
-  if (!runtime) return { output: '', error: 'Unsupported language.' }
+  if (!runtime)
+    return {
+      output: '',
+      error: 'Unsupported language.',
+    }
   try {
     const res = await fetch('https://emkc.org/api/v2/piston/execute', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         language: runtime.language,
         version: runtime.version,
-        files: [{ content: code }],
+        files: [
+          {
+            content: code,
+          },
+        ],
         stdin: stdin || '',
       }),
     })
     const data = await res.json().catch(() => null)
-    if (!res.ok) return { output: '', error: `Compiler service error (${res.status}): ${data?.message || 'Try again in a moment.'}` }
-    if (!data) return { output: '', error: 'Compiler service returned an unexpected response.' }
-    if (data.compile && data.compile.code !== 0) return { output: '', error: data.compile.stderr || data.compile.output || 'Compile error.' }
+    if (!res.ok)
+      return {
+        output: '',
+        error: `Compiler service error (${res.status}): ${data?.message || 'Try again in a moment.'}`,
+      }
+    if (!data)
+      return {
+        output: '',
+        error: 'Compiler service returned an unexpected response.',
+      }
+    if (data.compile && data.compile.code !== 0)
+      return {
+        output: '',
+        error: data.compile.stderr || data.compile.output || 'Compile error.',
+      }
     if (data.run) {
       const combined = (data.run.stdout || '') + (data.run.stderr ? '\n' + data.run.stderr : '')
-      return { output: combined || '(no output)', error: null }
+      return {
+        output: combined || '(no output)',
+        error: null,
+      }
     }
-    return { output: '', error: data.message || 'Execution failed.' }
+    return {
+      output: '',
+      error: data.message || 'Execution failed.',
+    }
   } catch (err) {
-    return { output: '', error: `Couldn't reach the compiler service — check your internet connection. (${err.message})` }
+    return {
+      output: '',
+      error: `Couldn't reach the compiler service — check your internet connection. (${err.message})`,
+    }
   }
 }
-
-
 function pythonStub(problem) {
   return `def solve(${problem.params.join(', ')}):\n    pass\n`
 }
@@ -192,33 +281,68 @@ function genericStub(languageId) {
   return languageId === 'java'
     ? 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Run freely here — auto-grading is available for JavaScript and Python.");\n    }\n}'
     : languageId === 'cpp'
-    ? '#include <iostream>\nint main() {\n    std::cout << "Run freely here — auto-grading is available for JavaScript and Python.";\n    return 0;\n}'
-    : ''
+      ? '#include <iostream>\nint main() {\n    std::cout << "Run freely here — auto-grading is available for JavaScript and Python.";\n    return 0;\n}'
+      : ''
 }
-
 function starterFor(languageId, problem) {
   if (languageId === 'javascript') return problem.starter
   if (languageId === 'python') return pythonStub(problem)
   return genericStub(languageId)
 }
-
 const difficultyColors = {
   Easy: 'bg-success/10 text-success',
   Medium: 'bg-warning/10 text-warning',
   Hard: 'bg-danger/10 text-danger',
 }
-
+function SubmissionsPanel({ problem, user, theme }) {
+  const mine = user ? getSubmissions(problem.id, user.username) : []
+  const [expanded, setExpanded] = useState(null)
+  const mutedText = theme === 'dark' ? 'text-white/60' : 'text-ink-soft'
+  const mainText = theme === 'dark' ? 'text-white' : 'text-ink'
+  if (!user) {
+    return <p className={`text-xs ${mutedText}`}>Log in to see your submission history for this problem.</p>
+  }
+  if (mine.length === 0) {
+    return <p className={`text-xs ${mutedText}`}>You haven't submitted a solution to this problem yet.</p>
+  }
+  return (
+    <div className="space-y-2.5">
+      {mine.map((s) => (
+        <div key={s.id} className="border border-border rounded-xl overflow-hidden">
+          <button
+            onClick={() => setExpanded((e) => (e === s.id ? null : s.id))}
+            className="w-full flex items-center justify-between px-3 py-2.5 text-xs"
+          >
+            <span className={`font-semibold ${s.passed ? 'text-success' : 'text-danger'}`}>
+              {s.passed ? '✅ Accepted' : `❌ ${s.passedCount}/${s.total} passed`}
+            </span>
+            <span className={mutedText}>
+              {s.language} · {new Date(s.at).toLocaleString()}
+            </span>
+          </button>
+          {expanded === s.id && (
+            <pre
+              className={`text-[11px] font-mono px-3 py-2.5 overflow-x-auto ${theme === 'dark' ? 'bg-black/30 text-white/80' : 'bg-muted text-ink'}`}
+            >
+              {s.code}
+            </pre>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
 function ProblemPicker({ problem, onSelect }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [diff, setDiff] = useState('All')
-
   const filtered = problemBank.filter((p) => {
-    const matchesQuery = p.title.toLowerCase().includes(query.toLowerCase()) || p.tags.some((t) => t.toLowerCase().includes(query.toLowerCase()))
+    const matchesQuery =
+      p.title.toLowerCase().includes(query.toLowerCase()) ||
+      p.tags.some((t) => t.toLowerCase().includes(query.toLowerCase()))
     const matchesDiff = diff === 'All' || p.difficulty === diff
     return matchesQuery && matchesDiff
   })
-
   return (
     <div className="mb-4">
       <button
@@ -237,19 +361,32 @@ function ProblemPicker({ problem, onSelect }) {
               placeholder="Search by title or tag..."
               className="flex-1 px-2.5 py-1.5 rounded-lg border border-border text-xs"
             />
-            <select value={diff} onChange={(e) => setDiff(e.target.value)} className="px-2 py-1.5 rounded-lg border border-border text-xs bg-white">
-              {['All', 'Easy', 'Medium', 'Hard'].map((d) => <option key={d}>{d}</option>)}
+            <select
+              value={diff}
+              onChange={(e) => setDiff(e.target.value)}
+              className="px-2 py-1.5 rounded-lg border border-border text-xs bg-white"
+            >
+              {['All', 'Easy', 'Medium', 'Hard'].map((d) => (
+                <option key={d}>{d}</option>
+              ))}
             </select>
           </div>
           <div className="max-h-64 overflow-y-auto space-y-1">
             {filtered.map((p) => (
               <button
                 key={p.id}
-                onClick={() => { onSelect(p); setOpen(false) }}
+                onClick={() => {
+                  onSelect(p)
+                  setOpen(false)
+                }}
                 className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between hover:bg-white ${p.id === problem.id ? 'bg-white font-semibold' : ''}`}
               >
                 <span className="truncate">{p.title}</span>
-                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ml-2 ${difficultyColors[p.difficulty]}`}>{p.difficulty}</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ml-2 ${difficultyColors[p.difficulty]}`}
+                >
+                  {p.difficulty}
+                </span>
               </button>
             ))}
             {filtered.length === 0 && <p className="text-xs text-ink-soft text-center py-4">No matches.</p>}
@@ -259,10 +396,28 @@ function ProblemPicker({ problem, onSelect }) {
     </div>
   )
 }
+function normalizeRemoteProblem(remote, testCases) {
+  return {
+    id: remote.id,
+    title: remote.title,
+    statement: remote.statement,
+    difficulty: (remote.difficulty || 'easy').replace(/^\w/, (c) => c.toUpperCase()),
+    tags: remote.tags || [],
+    constraints: remote.constraints || [],
+    params: [],
+    testCases: (testCases || []).map((tc) => ({ input: tc.input, output: tc.output })),
+    isRemote: true,
+    contestId: remote.contestId,
+  }
+}
 
 function CompilerView() {
   const user = useSelector((s) => s.auth.user)
+  const [searchParams] = useSearchParams()
+  const remoteContestId = searchParams.get('contestId')
+  const remoteProblemId = searchParams.get('problemId')
   const [problem, setProblem] = useState(problemBank[0])
+  const [loadingRemote, setLoadingRemote] = useState(!!(remoteContestId && remoteProblemId))
   const [language, setLanguage] = useState('javascript')
   const [code, setCode] = useState(starterFor('javascript', problemBank[0]))
   const [output, setOutput] = useState('Run your code to see output here.')
@@ -270,31 +425,76 @@ function CompilerView() {
   const [activeTab, setActiveTab] = useState('console')
   const [theme, setTheme] = useState('light')
   const [seconds, setSeconds] = useState(90 * 60)
-  const [lastRun, setLastRun] = useState(null) // { results }
-
+  const [lastRun, setLastRun] = useState(null)
+  const [leftTab, setLeftTab] = useState('statement')
+  useEffect(() => setLeftTab('statement'), [problem.id])
   useEffect(() => {
     const t = setInterval(() => setSeconds((s) => (s > 0 ? s - 1 : 0)), 1000)
     return () => clearInterval(t)
   }, [])
 
   useEffect(() => {
+    if (!remoteContestId || !remoteProblemId) return
+    let cancelled = false
+    setLoadingRemote(true)
+    Promise.all([
+      fetchProblemRemote(remoteContestId, remoteProblemId),
+      fetchProblemTestCasesRemote(remoteContestId, remoteProblemId),
+    ]).then(([problemRes, testCasesRes]) => {
+      if (cancelled) return
+      setLoadingRemote(false)
+      if (problemRes.problem) {
+        setProblem(normalizeRemoteProblem(problemRes.problem, testCasesRes.testCases))
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [remoteContestId, remoteProblemId])
+
+  useEffect(() => {
+    if (problem.isRemote) {
+      let cancelled = false
+      fetchPreloadedCodeRemote(problem.contestId || remoteContestId, problem.id, language).then((res) => {
+        if (!cancelled) setCode(res.code || genericStub(language))
+      })
+      setOutput('Run your code to see output here.')
+      setLastRun(null)
+      return () => {
+        cancelled = true
+      }
+    }
     setCode(starterFor(language, problem))
     setOutput('Run your code to see output here.')
     setLastRun(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language, problem.id])
-
   const timeStr = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
   const isGraded = GRADED_LANGUAGES.includes(language)
-
   const handleRun = async () => {
     setRunning(true)
     setActiveTab('console')
+    if (problem.isRemote) {
+      const tc = problem.testCases[0]
+      const r = await runViaPiston(language, code, tc?.input || '')
+      setOutput(
+        r.error
+          ? `❌ ${r.error}`
+          : `Output:\n${r.output}\n\n${tc ? `Expected:\n${tc.output}` : '(no sample test case provided)'}`
+      )
+      setRunning(false)
+      return
+    }
     if (language === 'javascript') {
-      const r = runJsAgainstTests(code, { ...problem, testCases: [problem.testCases[0]] })
+      const r = runJsAgainstTests(code, {
+        ...problem,
+        testCases: [problem.testCases[0]],
+      })
       setOutput(r.compileError ? `❌ ${r.compileError}` : formatResults(r.results, false))
     } else if (language === 'python') {
-      const r = await runPythonAgainstTests(code, { ...problem, testCases: [problem.testCases[0]] })
+      const r = await runPythonAgainstTests(code, {
+        ...problem,
+        testCases: [problem.testCases[0]],
+      })
       setOutput(formatResults(r.results, false))
     } else {
       const r = await runViaPiston(language, code, '')
@@ -302,33 +502,68 @@ function CompilerView() {
     }
     setRunning(false)
   }
-
   const handleSubmit = async () => {
     setRunning(true)
     setActiveTab('console')
-
-    if (!isGraded) {
-      setOutput('⚠️ Auto-grading is available for JavaScript and Python right now. Java/C++ can still be run freely above — full multi-language grading is on the roadmap.')
+    if (problem.isRemote) {
+      const results = []
+      for (const tc of problem.testCases) {
+        const r = await runViaPiston(language, code, tc.input)
+        const pass = !r.error && r.output.trim() === (tc.output || '').trim()
+        results.push({ pass, actual: r.error ? r.error : r.output, expected: tc.output, args: [tc.input] })
+      }
+      const passedCount = results.filter((x) => x.pass).length
+      const total = results.length
+      const allPassed = total > 0 && passedCount === total
+      setLastRun({ results })
+      if (user) {
+        addSubmission(problem.id, user.username, { language, code, passed: allPassed, passedCount, total })
+        if (allPassed) recordProblemSolved(user.username)
+      }
+      setOutput(
+        `${allPassed ? '✅' : '⚠️'} ${passedCount}/${total} test cases passed\n\n` +
+          formatResults(results, true) +
+          (allPassed
+            ? user
+              ? '\n\n+10 points added to your account. Streak updated.'
+              : '\n\nLog in to earn points and keep your streak for solved problems.'
+            : total === 0
+              ? '\n\nThis problem has no test cases yet — nothing to grade against.'
+              : '\n\nSome test cases failed — check the details above and try again.')
+      )
       setRunning(false)
       return
     }
-
+    if (!isGraded) {
+      setOutput(
+        '⚠️ Auto-grading is available for JavaScript and Python right now. Java/C++ can still be run freely above — full multi-language grading is on the roadmap.'
+      )
+      setRunning(false)
+      return
+    }
     const r = language === 'javascript' ? runJsAgainstTests(code, problem) : await runPythonAgainstTests(code, problem)
-
     if (r.compileError) {
       setOutput(`❌ ${r.compileError}`)
       setRunning(false)
       return
     }
-
     const results = r.results
     const passedCount = results.filter((x) => x.pass).length
     const total = results.length
     const allPassed = passedCount === total
-    setLastRun({ results })
-
+    setLastRun({
+      results,
+    })
+    if (user) {
+      addSubmission(problem.id, user.username, {
+        language,
+        code,
+        passed: allPassed,
+        passedCount,
+        total,
+      })
+    }
     if (allPassed && user) recordProblemSolved(user.username)
-
     setOutput(
       `${allPassed ? '✅' : '⚠️'} ${passedCount}/${total} test cases passed\n\n` +
         formatResults(results, true) +
@@ -340,7 +575,6 @@ function CompilerView() {
     )
     setRunning(false)
   }
-
   function formatResults(results, verbose) {
     return results
       .map((r, i) => {
@@ -350,39 +584,126 @@ function CompilerView() {
       })
       .join('\n')
   }
-
   return (
     <div className={theme === 'dark' ? 'bg-ink' : 'bg-white'}>
       <div className="max-w-[1400px] mx-auto grid lg:grid-cols-[1.1fr_1.4fr_0.9fr] gap-0 min-h-[calc(100vh-112px)]">
-        <div className={`border-r border-border p-6 overflow-y-auto ${theme === 'dark' ? 'text-white/80' : 'text-ink-soft'}`}>
-          <ProblemPicker problem={problem} onSelect={setProblem} />
+        <div
+          className={`border-r border-border p-6 overflow-y-auto ${theme === 'dark' ? 'text-white/80' : 'text-ink-soft'}`}
+        >
+          {loadingRemote ? (
+            <p className="text-sm text-ink-soft">Loading problem from the contest…</p>
+          ) : (
+            <>
+              <ProblemPicker problem={problem} onSelect={setProblem} />
 
-          <div className="flex items-center justify-between mb-4">
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${difficultyColors[problem.difficulty]}`}>{problem.difficulty}</span>
-            <span className="font-mono text-sm font-semibold text-accent">⏱ {timeStr}</span>
-          </div>
-          <h1 className={`font-display font-bold text-xl mb-1 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>{problem.title}</h1>
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {problem.tags.map((t) => <span key={t} className="px-2 py-0.5 rounded-full bg-muted text-[10px] font-medium">{t}</span>)}
-          </div>
-          <p className="text-sm leading-relaxed mb-4">{problem.statement}</p>
+              <div className="flex items-center justify-between mb-4">
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${difficultyColors[problem.difficulty]}`}>
+                  {problem.difficulty}
+                </span>
+                <span className="font-mono text-sm font-semibold text-accent">⏱ {timeStr}</span>
+              </div>
+              <h1 className={`font-display font-bold text-xl mb-1 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>
+                {problem.title}
+              </h1>
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {problem.tags.map((t) => (
+                  <span key={t} className="px-2 py-0.5 rounded-full bg-muted text-[10px] font-medium">
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <p className="text-sm leading-relaxed mb-4">{problem.statement}</p>
 
-          <div className="mb-4">
-            <h3 className={`font-semibold text-sm mb-2 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>Function signature</h3>
-            <div className="font-mono text-xs bg-muted rounded-xl p-3">solve({problem.params.join(', ')})</div>
-          </div>
+              <div className={`flex gap-1 border-b mb-4 -mt-1 ${theme === 'dark' ? 'border-white/10' : 'border-border'}`}>
+                {[
+                  {
+                    id: 'statement',
+                    label: 'Description',
+                  },
+                  {
+                    id: 'submissions',
+                    label: 'Solutions',
+                  },
+                  {
+                    id: 'discussion',
+                    label: 'Discussion',
+                  },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setLeftTab(t.id)}
+                    className={`px-3 py-2 text-xs font-semibold border-b-2 -mb-px transition-colors ${leftTab === t.id ? 'border-accent text-accent' : `border-transparent ${theme === 'dark' ? 'text-white/50 hover:text-white' : 'text-ink-soft hover:text-ink'}`}`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
 
-          <div>
-            <h3 className={`font-semibold text-sm mb-2 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>Examples</h3>
-            <div className="space-y-2">
-              {problem.testCases.slice(0, 3).map((tc, i) => (
-                <div key={i} className="font-mono text-xs bg-muted rounded-xl p-3">
-                  <div>Input: {problem.params.map((p, j) => `${p} = ${JSON.stringify(tc.args[j])}`).join(', ')}</div>
-                  <div>Output: {JSON.stringify(tc.expected)}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+              {leftTab === 'statement' && (
+                <>
+                  {!problem.isRemote && (
+                    <div className="mb-4">
+                      <h3 className={`font-semibold text-sm mb-2 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>
+                        Function signature
+                      </h3>
+                      <div className="font-mono text-xs bg-muted rounded-xl p-3">solve({problem.params.join(', ')})</div>
+                    </div>
+                  )}
+
+                  <div className="mb-4">
+                    <h3 className={`font-semibold text-sm mb-2 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>
+                      Examples
+                    </h3>
+                    {problem.testCases.length === 0 ? (
+                      <p className="text-xs text-ink-soft/70">No example test cases have been added to this problem yet.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {problem.testCases.slice(0, 3).map((tc, i) =>
+                          problem.isRemote ? (
+                            <div key={i} className="font-mono text-xs bg-muted rounded-xl p-3">
+                              <div>Input: {tc.input}</div>
+                              <div>Output: {tc.output}</div>
+                            </div>
+                          ) : (
+                            <div key={i} className="font-mono text-xs bg-muted rounded-xl p-3">
+                              <div>
+                                Input: {problem.params.map((p, j) => `${p} = ${JSON.stringify(tc.args[j])}`).join(', ')}
+                              </div>
+                              <div>Output: {JSON.stringify(tc.expected)}</div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {problem.constraints?.length > 0 && (
+                    <div>
+                      <h3 className={`font-semibold text-sm mb-2 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>
+                        Constraints
+                      </h3>
+                      <ul className="text-xs font-mono bg-muted rounded-xl p-3 space-y-1">
+                        {problem.constraints.map((c, i) => (
+                          <li key={i}>• {c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {leftTab === 'submissions' && <SubmissionsPanel problem={problem} user={user} theme={theme} />}
+
+              {leftTab === 'discussion' && (
+                <DiscussionPanel
+                  type="problem"
+                  id={problem.id}
+                  dark={theme === 'dark'}
+                  placeholder="Ask about this problem…"
+                />
+              )}
+            </>
+          )}
         </div>
 
         <div className="border-r border-border flex flex-col">
@@ -392,7 +713,12 @@ function CompilerView() {
               onChange={(e) => setLanguage(e.target.value)}
               className="text-sm font-medium bg-white border border-border rounded-xl px-3 py-1.5"
             >
-              {languages.map((l) => <option key={l.id} value={l.id}>{l.label}{GRADED_LANGUAGES.includes(l.id) ? '' : ' (freeform)'}</option>)}
+              {languages.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.label}
+                  {GRADED_LANGUAGES.includes(l.id) ? '' : ' (freeform)'}
+                </option>
+              ))}
             </select>
             <button
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
@@ -410,12 +736,16 @@ function CompilerView() {
               theme={theme === 'dark' ? 'vs-dark' : 'vs'}
               options={{
                 fontSize: 14,
-                minimap: { enabled: false },
+                minimap: {
+                  enabled: false,
+                },
                 scrollBeyondLastLine: false,
                 automaticLayout: true,
                 tabSize: 2,
                 wordWrap: 'on',
-                padding: { top: 12 },
+                padding: {
+                  top: 12,
+                },
               }}
               loading={<div className="h-full grid place-items-center text-sm text-ink-soft">Loading editor…</div>}
             />
@@ -452,7 +782,9 @@ function CompilerView() {
           </div>
 
           {activeTab === 'console' && (
-            <pre className="p-4 font-mono text-xs whitespace-pre-wrap flex-1 text-ink-soft overflow-y-auto">{output}</pre>
+            <pre className="p-4 font-mono text-xs whitespace-pre-wrap flex-1 text-ink-soft overflow-y-auto">
+              {output}
+            </pre>
           )}
 
           {activeTab === 'test cases' && (
@@ -460,7 +792,10 @@ function CompilerView() {
               {problem.testCases.map((tc, i) => {
                 const result = lastRun?.results?.[i]
                 return (
-                  <div key={i} className={`font-mono text-xs rounded-xl p-3 border ${result ? (result.pass ? 'border-success/40 bg-success/5' : 'border-danger/40 bg-danger/5') : 'border-border bg-muted'}`}>
+                  <div
+                    key={i}
+                    className={`font-mono text-xs rounded-xl p-3 border ${result ? (result.pass ? 'border-success/40 bg-success/5' : 'border-danger/40 bg-danger/5') : 'border-border bg-muted'}`}
+                  >
                     <div className="flex justify-between mb-1">
                       <span>Case {i + 1}</span>
                       {result && <span>{result.pass ? '✅' : '❌'}</span>}
@@ -477,8 +812,13 @@ function CompilerView() {
           {activeTab === 'leaderboard' && (
             <div className="p-4 space-y-2 overflow-y-auto">
               {['shreya.codes', 'devraj_99', 'nullptr_ninja', 'ananya_dev'].map((u, i) => (
-                <div key={u} className="flex items-center justify-between text-sm border border-border rounded-xl px-3 py-2">
-                  <span className="text-ink-soft">#{i + 1} {u}</span>
+                <div
+                  key={u}
+                  className="flex items-center justify-between text-sm border border-border rounded-xl px-3 py-2"
+                >
+                  <span className="text-ink-soft">
+                    #{i + 1} {u}
+                  </span>
                   <span className="font-mono text-accent text-xs">{40 - i * 3}ms</span>
                 </div>
               ))}
@@ -489,30 +829,23 @@ function CompilerView() {
     </div>
   )
 }
-
-
 const difficultyStyles = {
   Easy: 'bg-success/10 text-success',
   Medium: 'bg-warning/10 text-warning',
   Hard: 'bg-danger/10 text-danger',
 }
-
 function QuizzesView() {
   const [langFilter, setLangFilter] = useState('All')
   const [diffFilter, setDiffFilter] = useState('All')
   const [activeQuiz, setActiveQuiz] = useState(null)
-
   const languagesList = ['All', ...new Set(quizzes.map((q) => q.language))]
   const difficulties = ['All', 'Easy', 'Medium', 'Hard']
-
   const filtered = quizzes.filter(
     (q) => (langFilter === 'All' || q.language === langFilter) && (diffFilter === 'All' || q.difficulty === diffFilter)
   )
-
   if (activeQuiz) {
     return <QuizRunner quiz={activeQuiz} onExit={() => setActiveQuiz(null)} />
   }
-
   return (
     <div className="max-w-5xl mx-auto px-5 py-10">
       <h1 className="font-display font-bold text-2xl text-ink mb-1">Coding Quizzes</h1>
@@ -524,9 +857,7 @@ function QuizzesView() {
             <button
               key={l}
               onClick={() => setLangFilter(l)}
-              className={`px-3.5 py-1.5 rounded-2xl text-xs font-medium border transition-colors ${
-                langFilter === l ? 'bg-ink text-white border-ink' : 'border-border text-ink-soft hover:bg-bg-soft'
-              }`}
+              className={`px-3.5 py-1.5 rounded-2xl text-xs font-medium border transition-colors ${langFilter === l ? 'bg-ink text-white border-ink' : 'border-border text-ink-soft hover:bg-bg-soft'}`}
             >
               {l}
             </button>
@@ -537,9 +868,7 @@ function QuizzesView() {
             <button
               key={d}
               onClick={() => setDiffFilter(d)}
-              className={`px-3.5 py-1.5 rounded-2xl text-xs font-medium border transition-colors ${
-                diffFilter === d ? 'bg-accent text-white border-accent' : 'border-border text-ink-soft hover:bg-bg-soft'
-              }`}
+              className={`px-3.5 py-1.5 rounded-2xl text-xs font-medium border transition-colors ${diffFilter === d ? 'bg-accent text-white border-accent' : 'border-border text-ink-soft hover:bg-bg-soft'}`}
             >
               {d}
             </button>
@@ -561,7 +890,9 @@ function QuizzesView() {
               </span>
             </div>
             <h3 className="font-display font-semibold text-ink mb-1">{quiz.title}</h3>
-            <p className="text-xs text-ink-soft">{quiz.questions.length} questions · ~{quiz.questions.length * 1} min</p>
+            <p className="text-xs text-ink-soft">
+              {quiz.questions.length} questions · ~{quiz.questions.length * 1} min
+            </p>
           </button>
         ))}
         {filtered.length === 0 && (
@@ -571,23 +902,19 @@ function QuizzesView() {
     </div>
   )
 }
-
 function QuizRunner({ quiz, onExit }) {
   const [step, setStep] = useState(0)
   const [selected, setSelected] = useState(null)
   const [score, setScore] = useState(0)
   const [answered, setAnswered] = useState(false)
   const [finished, setFinished] = useState(false)
-
   const question = quiz.questions[step]
-
   const handleAnswer = (idx) => {
     if (answered) return
     setSelected(idx)
     setAnswered(true)
     if (idx === question.correct) setScore((s) => s + 1)
   }
-
   const handleNext = () => {
     if (step + 1 < quiz.questions.length) {
       setStep((s) => s + 1)
@@ -597,7 +924,6 @@ function QuizRunner({ quiz, onExit }) {
       setFinished(true)
     }
   }
-
   if (finished) {
     const pct = Math.round((score / quiz.questions.length) * 100)
     return (
@@ -605,14 +931,27 @@ function QuizRunner({ quiz, onExit }) {
         <div className="text-5xl mb-4">{pct >= 80 ? '🏆' : pct >= 50 ? '🎯' : '📚'}</div>
         <h2 className="font-display font-bold text-2xl text-ink mb-2">Quiz Complete!</h2>
         <p className="text-ink-soft mb-6">
-          You scored <span className="font-semibold text-accent">{score}/{quiz.questions.length}</span> on {quiz.title}
+          You scored{' '}
+          <span className="font-semibold text-accent">
+            {score}/{quiz.questions.length}
+          </span>{' '}
+          on {quiz.title}
         </p>
         <div className="flex justify-center gap-3">
-          <button onClick={onExit} className="px-5 py-2.5 rounded-2xl border border-border font-semibold text-sm hover:bg-bg-soft">
+          <button
+            onClick={onExit}
+            className="px-5 py-2.5 rounded-2xl border border-border font-semibold text-sm hover:bg-bg-soft"
+          >
             Back to Quizzes
           </button>
           <button
-            onClick={() => { setStep(0); setSelected(null); setScore(0); setAnswered(false); setFinished(false) }}
+            onClick={() => {
+              setStep(0)
+              setSelected(null)
+              setScore(0)
+              setAnswered(false)
+              setFinished(false)
+            }}
             className="px-5 py-2.5 rounded-2xl bg-accent text-white font-semibold text-sm hover:bg-accent-hover"
           >
             Retry Quiz
@@ -621,19 +960,29 @@ function QuizRunner({ quiz, onExit }) {
       </div>
     )
   }
-
   return (
     <div className="max-w-2xl mx-auto px-5 py-10">
       <div className="flex items-center justify-between mb-6">
-        <button onClick={onExit} className="text-sm text-ink-soft hover:text-accent">← Exit quiz</button>
-        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${difficultyStyles[quiz.difficulty]}`}>{quiz.difficulty}</span>
+        <button onClick={onExit} className="text-sm text-ink-soft hover:text-accent">
+          ← Exit quiz
+        </button>
+        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${difficultyStyles[quiz.difficulty]}`}>
+          {quiz.difficulty}
+        </span>
       </div>
 
       <div className="w-full h-1.5 bg-bg-soft rounded-full mb-6 overflow-hidden">
-        <div className="h-full bg-accent transition-all" style={{ width: `${((step + 1) / quiz.questions.length) * 100}%` }} />
+        <div
+          className="h-full bg-accent transition-all"
+          style={{
+            width: `${((step + 1) / quiz.questions.length) * 100}%`,
+          }}
+        />
       </div>
 
-      <p className="text-xs text-ink-soft mb-2">Question {step + 1} of {quiz.questions.length}</p>
+      <p className="text-xs text-ink-soft mb-2">
+        Question {step + 1} of {quiz.questions.length}
+      </p>
       <h2 className="font-display font-semibold text-xl text-ink mb-6">{question.q}</h2>
 
       <div className="space-y-3 mb-6">
@@ -656,27 +1005,26 @@ function QuizRunner({ quiz, onExit }) {
       </div>
 
       {answered && (
-        <button onClick={handleNext} className="w-full py-3 rounded-2xl bg-accent text-white font-semibold text-sm hover:bg-accent-hover">
+        <button
+          onClick={handleNext}
+          className="w-full py-3 rounded-2xl bg-accent text-white font-semibold text-sm hover:bg-accent-hover"
+        >
           {step + 1 < quiz.questions.length ? 'Next Question →' : 'See Results'}
         </button>
       )}
     </div>
   )
 }
-
 function TutorialsView() {
   const langKeys = Object.keys(tutorials)
   const [activeLang, setActiveLang] = useState(langKeys[0])
   const [activeLesson, setActiveLesson] = useState(0)
-
   const lang = tutorials[activeLang]
   const lesson = lang.lessons[activeLesson]
-
   const selectLang = (key) => {
     setActiveLang(key)
     setActiveLesson(0)
   }
-
   return (
     <div className="max-w-6xl mx-auto px-5 py-10 grid md:grid-cols-[220px_1fr] gap-8">
       <aside className="space-y-5">
@@ -687,9 +1035,7 @@ function TutorialsView() {
               <button
                 key={key}
                 onClick={() => selectLang(key)}
-                className={`w-full text-left px-3.5 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${
-                  activeLang === key ? 'bg-accent text-white' : 'text-ink-soft hover:bg-bg-soft'
-                }`}
+                className={`w-full text-left px-3.5 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${activeLang === key ? 'bg-accent text-white' : 'text-ink-soft hover:bg-bg-soft'}`}
               >
                 <span>{tutorials[key].icon}</span> {tutorials[key].label}
               </button>
@@ -703,9 +1049,7 @@ function TutorialsView() {
               <button
                 key={l.title}
                 onClick={() => setActiveLesson(i)}
-                className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-medium transition-colors ${
-                  activeLesson === i ? 'bg-bg-soft text-accent' : 'text-ink-soft hover:bg-bg-soft'
-                }`}
+                className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-medium transition-colors ${activeLesson === i ? 'bg-bg-soft text-accent' : 'text-ink-soft hover:bg-bg-soft'}`}
               >
                 {i + 1}. {l.title}
               </button>
@@ -717,13 +1061,26 @@ function TutorialsView() {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xl">{lang.icon}</span>
-          <span className="text-xs font-medium text-ink-soft">{lang.label} · Lesson {activeLesson + 1}/{lang.lessons.length}</span>
+          <span className="text-xs font-medium text-ink-soft">
+            {lang.label} · Lesson {activeLesson + 1}/{lang.lessons.length}
+          </span>
         </div>
         <h1 className="font-display font-bold text-2xl text-ink mb-4">{lesson.title}</h1>
         <p className="text-sm text-ink-soft leading-relaxed mb-6">{lesson.body}</p>
         <div className="rounded-2xl overflow-hidden border border-border">
-          <div className="bg-bg-soft px-4 py-2 text-xs font-mono text-ink-soft border-b border-border">example.{activeLang === 'javascript' ? 'js' : activeLang === 'python' ? 'py' : activeLang === 'java' ? 'java' : 'cpp'}</div>
-          <pre className="bg-[#1e1e1e] text-[#d4d4d4] font-mono text-xs p-5 overflow-x-auto whitespace-pre">{lesson.code}</pre>
+          <div className="bg-bg-soft px-4 py-2 text-xs font-mono text-ink-soft border-b border-border">
+            example.
+            {activeLang === 'javascript'
+              ? 'js'
+              : activeLang === 'python'
+                ? 'py'
+                : activeLang === 'java'
+                  ? 'java'
+                  : 'cpp'}
+          </div>
+          <pre className="bg-[#1e1e1e] text-[#d4d4d4] font-mono text-xs p-5 overflow-x-auto whitespace-pre">
+            {lesson.code}
+          </pre>
         </div>
 
         <div className="flex justify-between mt-8">

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
 import Home from './pages/Home.jsx'
@@ -22,17 +23,24 @@ import Settings from './pages/Settings.jsx'
 import Developers from './pages/Developers.jsx'
 import NotFound from './pages/NotFound.jsx'
 import { getStoredTheme, applyTheme } from './utils/theme.js'
-
+import { getAccessToken } from './utils/api.js'
+import { fetchCurrentUserRemote } from './utils/auth.js'
+import { setUser } from './store/authSlice.js'
 export default function App() {
   const [darkMode, setDarkMode] = useState(() => getStoredTheme() === 'dark')
   const location = useLocation()
+  const dispatch = useDispatch()
   const isEditorPage = location.pathname.startsWith('/editor')
   const isChatPage = location.pathname.startsWith('/chat')
-
   useEffect(() => {
     applyTheme(darkMode ? 'dark' : 'light')
   }, [darkMode])
-
+  useEffect(() => {
+    if (!getAccessToken()) return
+    fetchCurrentUserRemote().then((user) => {
+      if (user) dispatch(setUser(user))
+    })
+  }, [])
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />

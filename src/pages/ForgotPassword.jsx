@@ -1,16 +1,14 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { userExistsByEmail, resetPasswordLocal } from '../utils/auth.js'
-
 export default function ForgotPassword() {
-  const [step, setStep] = useState(1) // 1 = find account, 2 = set new password
+  const [step, setStep] = useState(1)
   const [email, setEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
   const navigate = useNavigate()
-
   const handleFindAccount = (e) => {
     e.preventDefault()
     setError('')
@@ -24,7 +22,6 @@ export default function ForgotPassword() {
     }
     setStep(2)
   }
-
   const handleReset = (e) => {
     e.preventDefault()
     setError('')
@@ -43,12 +40,14 @@ export default function ForgotPassword() {
     }
     setDone(true)
   }
-
   return (
     <div className="max-w-md mx-auto px-5 py-20">
       <h1 className="font-display font-bold text-2xl text-ink mb-1">Reset your password</h1>
       <p className="text-sm text-ink-soft mb-6">
-        Remembered it? <Link to="/login" className="text-accent font-medium hover:underline">Back to login</Link>
+        Remembered it?{' '}
+        <Link to="/login" className="text-accent font-medium hover:underline">
+          Back to login
+        </Link>
       </p>
 
       {done ? (
@@ -65,7 +64,11 @@ export default function ForgotPassword() {
         </div>
       ) : step === 1 ? (
         <form onSubmit={handleFindAccount} className="space-y-4">
-          {error && <div className="px-4 py-2.5 rounded-2xl bg-danger/10 border border-danger/30 text-sm text-danger">{error}</div>}
+          {error && (
+            <div className="px-4 py-2.5 rounded-2xl bg-danger/10 border border-danger/30 text-sm text-danger">
+              {error}
+            </div>
+          )}
           <div>
             <label className="text-xs font-semibold text-ink-soft block mb-1.5">Email</label>
             <input
@@ -78,16 +81,23 @@ export default function ForgotPassword() {
             />
           </div>
           <p className="text-[11px] text-ink-soft">
-            This checks for your account on this device. There's no email/SMS verification step yet, so treat this like a local
-            recovery option rather than a secure production reset flow.
+            This checks for your account on this device. There's no email/SMS verification step yet, so treat this like
+            a local recovery option rather than a secure production reset flow.
           </p>
-          <button type="submit" className="w-full py-3 rounded-2xl bg-accent text-white font-semibold hover:bg-accent-hover shadow-lift">
+          <button
+            type="submit"
+            className="w-full py-3 rounded-2xl bg-accent text-white font-semibold hover:bg-accent-hover shadow-lift"
+          >
             Continue →
           </button>
         </form>
       ) : (
         <form onSubmit={handleReset} className="space-y-4">
-          {error && <div className="px-4 py-2.5 rounded-2xl bg-danger/10 border border-danger/30 text-sm text-danger">{error}</div>}
+          {error && (
+            <div className="px-4 py-2.5 rounded-2xl bg-danger/10 border border-danger/30 text-sm text-danger">
+              {error}
+            </div>
+          )}
           <div className="px-4 py-2.5 rounded-2xl bg-bg-soft border border-border text-sm text-ink-soft">
             Resetting password for <strong className="text-ink">{email.trim().toLowerCase()}</strong>
           </div>
@@ -118,10 +128,17 @@ export default function ForgotPassword() {
             )}
           </div>
           <div className="flex gap-3">
-            <button type="button" onClick={() => setStep(1)} className="flex-1 py-3 rounded-2xl border border-border text-sm font-medium text-ink hover:bg-bg-soft">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="flex-1 py-3 rounded-2xl border border-border text-sm font-medium text-ink hover:bg-bg-soft"
+            >
               ← Back
             </button>
-            <button type="submit" className="flex-1 py-3 rounded-2xl bg-accent text-white font-semibold hover:bg-accent-hover shadow-lift">
+            <button
+              type="submit"
+              className="flex-1 py-3 rounded-2xl bg-accent text-white font-semibold hover:bg-accent-hover shadow-lift"
+            >
               Reset Password
             </button>
           </div>
