@@ -27,4 +27,6 @@ export function disconnectSocket() {
 export const SOCKET_EVENTS = {
   NEW_MESSAGE: 'NEW_MESSAGE',
   NEW_MESSAGE_ALERT: 'NEW_MESSAGE_ALERT',
+  REFETCH_CHATS : "REFETCH_CHATS",
+  NEW_REQUEST : "NEW_REQUEST"
 }

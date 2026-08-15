@@ -21,6 +21,7 @@ export default function Login() {
       setError(result.error)
       return
     }
+    // console.log(result)
     dispatch(setUser(result.user))
     navigate('/')
   }

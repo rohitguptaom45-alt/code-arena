@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../utils/appData.js'
-import { fetchNotificationsRemote } from '../utils/chatSocialApi.js'
+import { fetchNotificationsRemote } from '../utils/chatSocialApi.js'  //aab iske andar check karenge yahak socket nahi mila k
 const TYPE_ICON = {
   follow: '👥',
   contest: '🏁',

@@ -189,6 +189,7 @@ export function loginUser(email, password) {
   }
 }
 export async function registerUserRemoteFirst(form) {
+  console.log(form)
   try {
     const res = await api.register({
       username: (form.username || '').trim().toLowerCase(),
@@ -199,7 +200,7 @@ export async function registerUserRemoteFirst(form) {
       bio: form.bio,
       type: form.type,
       git: form.github,
-      phone: form.phone || '',
+      phone: form.phone?.trim() || null
     })
     const loginRes = await api.login({
       email: (form.email || '').trim().toLowerCase(),
@@ -240,6 +241,7 @@ export async function loginUserRemoteFirst(email, password) {
       })
     }
     const user = upsertLocalFromRemote(res?.data?.user || {})
+    // console.log(res.data)
     return {
       user,
       source: 'remote',

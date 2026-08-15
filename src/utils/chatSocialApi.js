@@ -229,7 +229,7 @@ export async function deleteChatRemote(chatId) {
 
 export async function fetchNotificationsRemote() {
   try {
-    const res = await notificationApi.getAll()
+    const res = await notificationApi.getAll()  //aab iske andar check karenge yahak socket nahi mila k
     const notifications = (res?.data || []).map((n) => ({
       id: n.id,
       status: n.status,

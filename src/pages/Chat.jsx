@@ -251,9 +251,9 @@ export default function Chat() {
   const [activeChatId, setActiveChatId] = useState(null)
   const [messages, setMessages] = useState([])
   const [friends, setFriends] = useState([])
-  const [pending, setPending] = useState([])
+  const [pending, setPending] = useState([])      // this cariable hold the request model
   const [search, setSearch] = useState('')
-  const [findQuery, setFindQuery] = useState('')
+  const [findQuery, setFindQuery] = useState('')   // possibel variable 
   const [findResults, setFindResults] = useState([])
   const [findSending, setFindSending] = useState({})
   const [findLoading, setFindLoading] = useState(false)
@@ -274,7 +274,7 @@ export default function Chat() {
     setChats(res.chats)
   }
   const loadFriends = async () => setFriends((await fetchFriendsRemote(user?.id)).friends)
-  const loadPending = async () => setPending((await fetchPendingRequestsRemote()).requests)
+  const loadPending = async () => setPending((await fetchPendingRequestsRemote()).requests)   // this is the main API calling the request   
 
   useEffect(() => {
     if (!user) return
@@ -282,6 +282,18 @@ export default function Chat() {
     loadFriends()
     loadPending()
   }, [user])
+
+  useEffect(() => {
+    const handleLiveRequest = (request) => {
+      console.log("New friend request received:", request);
+      loadPending()  // Refresh the pending requests list
+    }
+    const s = connectSocket()
+    s.on(SOCKET_EVENTS.NEW_REQUEST, handleLiveRequest)
+    return () => {
+      s.off(SOCKET_EVENTS.NEW_REQUEST, handleLiveRequest)
+    }
+  },[])
 
   // Arrived from a user's profile via the Message button — only works if a chat already exists.
   useEffect(() => {
@@ -439,8 +451,8 @@ export default function Chat() {
     const localMessage = {
       id: `local-${Date.now()}`,
       content,
-      senderId: user.id,
-      sender: { id: user.id, username: user.username, fullName: user.fullName },
+      senderId: user.remoteId,
+      sender: { id: user.remoteId, username: user.username, fullName: user.fullName },
       createdAt: new Date().toISOString(),
     }
     s.emit(SOCKET_EVENTS.NEW_MESSAGE, { communityId: activeChatId, members: memberIds, message: content })
@@ -661,12 +673,13 @@ export default function Chat() {
                   Delete chat
                 </button>
               )}
-            </div>
+            </div>   {/* Chat Header */}
 
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 space-y-3 bg-bg-soft/30">
               {messages.length === 0 && <p className="text-center text-sm text-ink-soft py-10">No messages yet — say hi 👋</p>}
               {messages.map((m) => {
-                const isMe = m.senderId === user.id
+                const isMe = m.senderId === user.remoteId
+               
                 return (
                   <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[75%] sm:max-w-[65%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
