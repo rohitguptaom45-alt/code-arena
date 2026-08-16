@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useSearchParams } from 'react-router-dom'
 import { connectSocket, disconnectSocket, SOCKET_EVENTS } from '../utils/socket.js'
 import {
@@ -22,6 +22,8 @@ import {
   deleteChatRemote,
 } from '../utils/chatSocialApi.js'
 import LoginRequiredModal from '../components/LoginRequiredModal.jsx'
+import { getOrSaveFromStorage } from '../lib/locals.js'
+import { removeNewMessagesAlert, setNewMessagesAlert } from '../store/chatSlice.js'
 
 function initials(name) {
   return (name || '?').replace(/[._]/g, ' ').trim()[0]?.toUpperCase() || '?'
@@ -31,12 +33,25 @@ function fmtTime(iso) {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }
 
-function Avatar({ name, size = 'w-11 h-11', textSize = 'text-sm' }) {
+function Avatar({
+  name,
+  size = "w-11 h-11",
+  textSize = "text-sm",
+  isOnline = true,
+}) {
   return (
-    <span className={`${size} rounded-full bg-accent-soft text-white grid place-items-center font-display font-bold ${textSize} shrink-0`}>
-      {initials(name)}
-    </span>
-  )
+    <div className="relative shrink-0">
+      <span
+        className={`${size} rounded-full bg-accent-soft text-white grid place-items-center font-display font-bold ${textSize}`}
+      >
+        {initials(name)}
+      </span>
+
+      {isOnline && (
+        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+      )}
+    </div>
+  );
 }
 
 function CreateGroupModal({ friends, initialSelectedId, currentUserId, onClose, onCreated }) {
@@ -104,7 +119,7 @@ function CreateGroupModal({ friends, initialSelectedId, currentUserId, onClose, 
   )
 }
 
-function ManageGroupModal({ chat, friends, onClose, onUpdated, onDeleted }) {
+function ManageGroupModal({ chat, friends, onClose, onUpdated, onDeleted,onLeave}) {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState(chat.name)
@@ -153,6 +168,13 @@ function ManageGroupModal({ chat, friends, onClose, onUpdated, onDeleted }) {
     const res = await deleteGroupRemote(chat.id)
     if (!res.error) onDeleted()
   }
+   async function handleLeaveGroup() {
+    if (!window.confirm('Leave this group?')) return
+    const res = await leaveGroupRemote(chat.id)
+    if (!res.error) {
+      onLeave();
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/40 grid place-items-center z-50 px-4" onClick={onClose}>
@@ -166,9 +188,21 @@ function ManageGroupModal({ chat, friends, onClose, onUpdated, onDeleted }) {
             onChange={(e) => setName(e.target.value)}
             className="flex-1 px-4 py-2 rounded-2xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft"
           />
-          <button onClick={handleRename} className="px-3 py-2 rounded-2xl bg-accent text-white text-xs font-semibold hover:bg-accent-hover">
-            Save
-          </button>
+          {chat.isAdmin ? (
+            <button
+              onClick={handleRename}
+              className="px-3 py-2 rounded-2xl bg-accent text-white text-xs font-semibold hover:bg-accent-hover"
+            >
+              Save
+            </button>
+          ):(
+             <button
+              onClick={handleLeaveGroup}
+              className="px-3 py-2 rounded-2xl bg-accent text-white text-xs font-semibold hover:bg-accent-hover"
+            >
+              Leave
+            </button>
+          )}
         </div>
 
         <div className="flex items-center justify-between mb-2">
@@ -217,11 +251,14 @@ function ManageGroupModal({ chat, friends, onClose, onUpdated, onDeleted }) {
                   {m.fullName || m.username}
                   {m.id === chat.adminId && <span className="ml-2 text-[10px] font-semibold text-accent">ADMIN</span>}
                 </span>
-                {m.id !== chat.adminId && (
-                  <button onClick={() => handleRemove(m.id)} className="text-xs text-danger hover:underline">
-                    Remove
-                  </button>
-                )}
+                {chat.isAdmin && m.id !== chat.adminId && (
+  <button
+    onClick={() => handleRemove(m.id)}
+    className="text-xs text-danger hover:underline"
+  >
+    Remove
+  </button>
+)}
               </div>
             ))}
           </div>
@@ -240,11 +277,24 @@ function ManageGroupModal({ chat, friends, onClose, onUpdated, onDeleted }) {
   )
 }
 
+
+
+
+
+
+
+
+
+
+
+
 export default function Chat() {
   const user = useSelector((s) => s.auth.user)
+
   const [searchParams, setSearchParams] = useSearchParams()
   const deepLinkWithId = searchParams.get('with')
   const deepLinkGroupWithId = searchParams.get('newGroupWith')
+
 
   const [tab, setTab] = useState('chats') // chats | requests | find
   const [chats, setChats] = useState([])
@@ -264,16 +314,40 @@ export default function Chat() {
   const [createGroupOpen, setCreateGroupOpen] = useState(false)
   const [manageGroupOpen, setManageGroupOpen] = useState(false)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
+  const [isTyping, setIsTyping] = useState(false)
   const scrollRef = useRef(null)
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const dispatch = useDispatch()
+  const newMessagesAlert = useSelector(
+    (state) => state.community.newMessagesAlert
+  ) || [];
+
+  useEffect(() => {
+    getOrSaveFromStorage({
+      key: SOCKET_EVENTS.NEW_MESSAGE_ALERT,
+      value: newMessagesAlert,
+      get: false,
+    });
+  }, [newMessagesAlert]);
 
   const activeChat = chats.find((c) => c.id === activeChatId) || null
+
   const filteredChats = chats.filter((c) => (c.name || '').toLowerCase().includes(search.toLowerCase()))
 
   const loadChats = async () => {
-    const res = await fetchMyChatsRemote(user?.id)
-    setChats(res.chats)
-  }
-  const loadFriends = async () => setFriends((await fetchFriendsRemote(user?.id)).friends)
+
+    const res = await fetchMyChatsRemote(user?.remoteId);
+
+    const updatedChats = res.chats.map((chat) => ({
+      ...chat,
+      isOnline: chat.members?.some((member) =>
+        onlineUsers.has(member.id.toString())
+      ) || false,
+    }));
+
+    setChats(updatedChats);
+  };
+  const loadFriends = async () => setFriends((await fetchFriendsRemote(user?.remoteId)).friends)
   const loadPending = async () => setPending((await fetchPendingRequestsRemote()).requests)   // this is the main API calling the request   
 
   useEffect(() => {
@@ -285,33 +359,91 @@ export default function Chat() {
 
   useEffect(() => {
     const handleLiveRequest = (request) => {
-      console.log("New friend request received:", request);
+
       loadPending()  // Refresh the pending requests list
     }
+    const handleRefeching = (data) => {
+
+      loadChats();
+    }
+
     const s = connectSocket()
     s.on(SOCKET_EVENTS.NEW_REQUEST, handleLiveRequest)
+    s.on(SOCKET_EVENTS.REFETCH_CHATS, handleRefeching)
+
+
     return () => {
       s.off(SOCKET_EVENTS.NEW_REQUEST, handleLiveRequest)
+      s.off(SOCKET_EVENTS.REFETCH_CHATS, handleRefeching)
+      // s.off(SOCKET_EVENTS.START_TYPING,handleTyping)
     }
-  },[])
+  }, [])                                                    //  Maiin Live Chat Socket Event 
 
-  // Arrived from a user's profile via the Message button — only works if a chat already exists.
+  useEffect(() => {
+    const s = connectSocket();
+
+    const handleStartTyping = ({ communityId }) => {
+      if (communityId !== activeChatId) return;
+
+      setIsTyping(true);
+    };
+
+    const handleStopTyping = ({ communityId }) => {
+      if (communityId !== activeChatId) return;
+
+      setIsTyping(false);
+    };
+
+    s.on(SOCKET_EVENTS.START_TYPING, handleStartTyping);
+    s.on(SOCKET_EVENTS.STOP_TYPING, handleStopTyping);
+
+    return () => {
+      s.off(SOCKET_EVENTS.START_TYPING, handleStartTyping);
+      s.off(SOCKET_EVENTS.STOP_TYPING, handleStopTyping);
+    };
+  }, [activeChatId]);
+
+
+  const typingTimeout = useRef(null);
+
+  const handleDraftChange = (e) => {
+    const value = e.target.value;
+
+    setDraft(value);
+
+    const socket = connectSocket();
+
+    socket.emit(SOCKET_EVENTS.START_TYPING, {
+      communityId: activeChatId,
+      members: activeChat.members.map((member) => member.id),
+    });
+
+    clearTimeout(typingTimeout.current);
+
+    typingTimeout.current = setTimeout(() => {
+      socket.emit(SOCKET_EVENTS.STOP_TYPING, {
+        communityId: activeChatId,
+        members: activeChat.members.map((member) => member.id),
+      });
+    }, 1000);
+  };
+
   useEffect(() => {
     if (!user || !deepLinkWithId) return
-    ;(async () => {
-      const res = await findExistingDirectChatRemote(deepLinkWithId, user.id)
-      if (res.chat) {
-        setActiveChatId(res.chat.id)
-        setTab('chats')
-        setMobileShowThread(true)
-      } else {
-        // No chat with them yet — send a request instead so they can chat once it's accepted.
-        await sendFriendRequestRemote(deepLinkWithId)
-        setTab('requests')
-      }
-      searchParams.delete('with')
-      setSearchParams(searchParams, { replace: true })
-    })()
+      ; (async () => {
+        const res = await findExistingDirectChatRemote(deepLinkWithId, user.remoteId)
+        if (res.chat) {
+          setActiveChatId(res.chat.id)
+          setTab('chats')
+          setMobileShowThread(true)
+        } else {
+          // No chat with them yet — send a request instead so they can chat once it's accepted.
+          await sendFriendRequestRemote(deepLinkWithId)
+          setTab('requests')
+        }
+        searchParams.delete('with')
+        setSearchParams(searchParams, { replace: true })
+      })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, deepLinkWithId])
 
@@ -341,7 +473,17 @@ export default function Chat() {
     const onMessage = ({ communityId, message }) => {
       const chatId = communityId
       if (chatId === activeChatId) {
-        setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]))
+        setMessages((prev) =>
+          prev.some((m) => m.id === message.id)
+            ? prev
+            : [...prev, message]
+        );
+      } else {
+        dispatch(
+          setNewMessagesAlert({
+            communityId: chatId,
+          })
+        );
       }
       setChats((prev) => {
         const idx = prev.findIndex((c) => c.id === chatId)
@@ -362,9 +504,9 @@ export default function Chat() {
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  }, [messages.length, activeChatId])
+  }, [messages.length, activeChatId, isTyping])
 
-  useEffect(() => () => disconnectSocket(), [])
+  // useEffect(() => () => disconnectSocket(), [])
 
   function requireLogin(fn) {
     return (...args) => {
@@ -377,9 +519,12 @@ export default function Chat() {
   }
 
   function selectChat(id) {
-    setActiveChatId(id)
-    setMobileShowThread(true)
-    setManageGroupOpen(false)
+    setActiveChatId(id);
+
+    dispatch(removeNewMessagesAlert(id));
+
+    setMobileShowThread(true);
+    setManageGroupOpen(false);
   }
 
   async function runFindSearch(e) {
@@ -401,7 +546,7 @@ export default function Chat() {
     }
   }
   async function handleMessageFriend(userId) {
-    const res = await findExistingDirectChatRemote(userId, user.id)
+    const res = await findExistingDirectChatRemote(userId, user.remoteId)
     if (!res.error) {
       selectChat(res.chat.id)
       setTab('chats')
@@ -409,7 +554,7 @@ export default function Chat() {
   }
 
   async function handleAccept(requestId) {
-    const res = await respondFriendRequestRemote(requestId, true, user.id)
+    const res = await respondFriendRequestRemote(requestId, true, user.remoteId)
     if (!res.error) {
       loadPending()
       loadFriends()
@@ -434,46 +579,75 @@ export default function Chat() {
   }
 
   async function sendMessage(e) {
-    e.preventDefault()
-    const text = draft.trim()
-    const attachment = attachUrl.trim()
-    if (!text && !attachment) return
-    const chat = activeChat
-    if (!chat) return
-    setDraft('')
-    setAttachUrl('')
-    setShowAttach(false)
-    const content = attachment ? `${text}${text ? '\n' : ''}${attachment}` : text
-    const memberIds = chat.isGroup
-      ? (chat.members || []).map((m) => m.user?.id).filter(Boolean)
-      : [user.id, chat.otherUser?.id].filter(Boolean)
-    const s = connectSocket()
+    e.preventDefault();
+
+    const text = draft.trim();
+    const attachment = attachUrl.trim();
+
+    if (!text && !attachment) return;
+
+    const chat = activeChat;
+    if (!chat) return;
+
+    // Clear input immediately
+    setDraft("");
+    setAttachUrl("");
+    setShowAttach(false);
+
+    const content = attachment
+      ? `${text}${text ? "\n" : ""}${attachment}`
+      : text;
+
+    // members is now the same for both group and 1-to-1 chats
+    const memberIds = (chat.members || [])
+      .map((member) => member.id)
+      .filter(Boolean);
+
+    const s = connectSocket();
+
+    // Optimistic message
     const localMessage = {
       id: `local-${Date.now()}`,
       content,
       senderId: user.remoteId,
-      sender: { id: user.remoteId, username: user.username, fullName: user.fullName },
+      sender: {
+        id: user.remoteId,
+        username: user.username,
+        fullName: user.fullName,
+      },
       createdAt: new Date().toISOString(),
-    }
-    s.emit(SOCKET_EVENTS.NEW_MESSAGE, { communityId: activeChatId, members: memberIds, message: content })
-    setMessages((prev) => [...prev, localMessage])
+    };
+
+    // Send message to backend
+    s.emit(SOCKET_EVENTS.NEW_MESSAGE, {
+      communityId: activeChatId,
+      members: memberIds,
+      message: content,
+    });
+
+    // Show message immediately in sender's UI
+    setMessages((prev) => [...prev, localMessage]);
+
+    // Update chat preview
     setChats((prev) => {
-      const idx = prev.findIndex((c) => c.id === activeChatId)
-      if (idx === -1) return prev
-      const updated = { ...prev[idx], lastMessage: localMessage, updatedAt: localMessage.createdAt }
-      return [updated, ...prev.filter((c) => c.id !== activeChatId)]
-    })
+      const idx = prev.findIndex((c) => c.id === activeChatId);
+
+      if (idx === -1) return prev;
+
+      const updated = {
+        ...prev[idx],
+        lastMessage: localMessage,
+        updatedAt: localMessage.createdAt,
+      };
+
+      return [
+        updated,
+        ...prev.filter((c) => c.id !== activeChatId),
+      ];
+    });
   }
 
-  async function handleLeaveGroup() {
-    if (!activeChat || !window.confirm('Leave this group?')) return
-    const res = await leaveGroupRemote(activeChat.id)
-    if (!res.error) {
-      setChats((prev) => prev.filter((c) => c.id !== activeChat.id))
-      setActiveChatId(null)
-      setMobileShowThread(false)
-    }
-  }
+ 
   async function handleDeleteDirectChat() {
     if (!activeChat || !window.confirm('Delete this chat?')) return
     const res = await deleteChatRemote(activeChat.id)
@@ -484,13 +658,44 @@ export default function Chat() {
     }
   }
 
+  useEffect(() => {
+    const s = connectSocket();
+
+    const handleOnlineUsers = (users) => {
+
+
+      const onlineSet = new Set(
+        users.map((id) => id.toString())
+      );
+
+      setOnlineUsers(onlineSet);
+
+      setChats((prevChats) =>
+        prevChats.map((chat) => ({
+          ...chat,
+          isOnline: chat.members?.some((member) =>
+            onlineSet.has(member.id.toString())
+          ) || false,
+        }))
+      );
+    };
+
+    s.on(SOCKET_EVENTS.ONLINE_USERS, handleOnlineUsers);
+
+    return () => {
+      s.off(SOCKET_EVENTS.ONLINE_USERS, handleOnlineUsers);
+    };
+  }, []);
+
+
+
   if (!user) {
     return (
       <div className="max-w-md mx-auto text-center py-24 px-4">
         <div className="w-16 h-16 mx-auto rounded-2xl bg-bg-soft grid place-items-center text-3xl mb-4">💬</div>
         <h2 className="font-display font-bold text-xl text-ink mb-2">Login to chat</h2>
         <p className="text-sm text-ink-soft mb-6">Login to add friends, start conversations and create groups.</p>
-        <LoginRequiredModal open onClose={() => {}} />
+        <LoginRequiredModal open onClose={() => { }} />
       </div>
     )
   }
@@ -517,9 +722,8 @@ export default function Chat() {
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={`flex-1 px-2 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-                  tab === key ? 'bg-white shadow-soft text-accent' : 'text-ink-soft'
-                }`}
+                className={`flex-1 px-2 py-1.5 rounded-xl text-xs font-medium transition-colors ${tab === key ? 'bg-white shadow-soft text-accent' : 'text-ink-soft'
+                  }`}
               >
                 {label}
               </button>
@@ -543,28 +747,59 @@ export default function Chat() {
                   No chats yet — add friends and start a conversation, or create a group.
                 </p>
               )}
-              {filteredChats.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => selectChat(c.id)}
-                  className={`w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition-colors ${
-                    activeChatId === c.id ? 'bg-accent-soft/15' : 'hover:bg-bg-soft'
-                  }`}
-                >
-                  <Avatar name={c.name} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-ink truncate">
-                      {c.isGroup && '# '}
-                      {c.name}
-                    </p>
-                    <p className="text-xs text-ink-soft truncate">
-                      {c.lastMessage ? c.lastMessage.content || '📎 Attachment' : c.isGroup ? `${c.memberCount} members` : 'Say hi 👋'}
-                    </p>
-                  </div>
-                  {c.lastMessage && <span className="text-[11px] text-ink-soft/70 shrink-0">{fmtTime(c.lastMessage.createdAt)}</span>}
-                </button>
-              ))}
+              {filteredChats.map((c) => {
+                const unreadCount =
+                  newMessagesAlert.find(
+                    (item) => item.communityId === c.id
+                  )?.count || 0;
+
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => selectChat(c.id)}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition-colors ${activeChatId === c.id
+                      ? "bg-accent-soft/15"
+                      : "hover:bg-bg-soft"
+                      }`}
+                  >
+                    <Avatar
+                      name={c.name}
+                      isOnline={c.isOnline}
+                    />
+
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm text-ink truncate">
+                        {c.isGroup && "# "}
+                        {c.name}
+                      </p>
+
+                      <p className="text-xs text-ink-soft truncate">
+                        {c.lastMessage
+                          ? c.lastMessage.content || "📎 Attachment"
+                          : c.isGroup
+                            ? `${c.memberCount} members`
+                            : "Say hi 👋"}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {c.lastMessage && (
+                        <span className="text-[11px] text-ink-soft/70">
+                          {fmtTime(c.lastMessage.createdAt)}
+                        </span>
+                      )}
+
+                      {unreadCount > 0 && (
+                        <span className="min-w-5 h-5 px-1.5 rounded-full bg-accent text-white text-[11px] font-bold flex items-center justify-center">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
+
           </>
         )}
 
@@ -659,49 +894,80 @@ export default function Chat() {
                 <p className="text-xs text-ink-soft">{activeChat.isGroup ? `${activeChat.memberCount} members` : 'Direct message'}</p>
               </div>
               {activeChat.isGroup ? (
-                activeChat.isAdmin ? (
-                  <button onClick={() => setManageGroupOpen(true)} className="px-3 py-1.5 rounded-xl border border-border text-xs font-medium text-ink-soft hover:bg-bg-soft">
-                    Manage
-                  </button>
-                ) : (
-                  <button onClick={handleLeaveGroup} className="px-3 py-1.5 rounded-xl border border-border text-xs font-medium text-danger hover:bg-danger/5">
-                    Leave
-                  </button>
-                )
+                <button
+                  onClick={() => setManageGroupOpen(true)}
+                  className="px-3 py-1.5 rounded-xl border border-border text-xs font-medium text-ink-soft hover:bg-bg-soft"
+                >
+                  Manage
+                </button>
               ) : (
-                <button onClick={handleDeleteDirectChat} className="px-3 py-1.5 rounded-xl border border-border text-xs font-medium text-danger hover:bg-danger/5">
+                <button
+                  onClick={handleDeleteDirectChat}
+                  className="px-3 py-1.5 rounded-xl border border-border text-xs font-medium text-danger hover:bg-danger/5"
+                >
                   Delete chat
                 </button>
               )}
             </div>   {/* Chat Header */}
 
-            <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 space-y-3 bg-bg-soft/30">
-              {messages.length === 0 && <p className="text-center text-sm text-ink-soft py-10">No messages yet — say hi 👋</p>}
+            <div
+              ref={scrollRef}
+              className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 space-y-3 bg-bg-soft/30"
+            >
+              {messages.length === 0 && !isTyping && (
+                <p className="text-center text-sm text-ink-soft py-10">
+                  No messages yet — say hi 👋
+                </p>
+              )}
+
               {messages.map((m) => {
-                const isMe = m.senderId === user.remoteId
-               
+                const isMe = m.senderId === user.remoteId;
+
                 return (
-                  <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[75%] sm:max-w-[65%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
+                  <div
+                    key={m.id}
+                    className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[75%] sm:max-w-[65%] ${isMe ? "items-end" : "items-start"
+                        } flex flex-col`}
+                    >
                       {!isMe && activeChat.isGroup && (
-                        <span className="text-[11px] font-medium text-accent mb-0.5 px-1">{m.sender?.fullName || m.sender?.username}</span>
+                        <span className="text-[11px] font-medium text-accent mb-0.5 px-1">
+                          {m.sender?.fullName || m.sender?.username}
+                        </span>
                       )}
+
                       <div
-                        className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                          isMe ? 'bg-accent text-white rounded-br-md' : 'bg-white border border-border text-ink rounded-bl-md'
-                        }`}
+                        className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isMe
+                          ? "bg-accent text-white rounded-br-md"
+                          : "bg-white border border-border text-ink rounded-bl-md"
+                          }`}
                       >
                         {m.content}
                       </div>
+
                       <div className="flex items-center gap-2 mt-1 px-1">
-                        <span className="text-[11px] text-ink-soft/70">{fmtTime(m.createdAt)}</span>
+                        <span className="text-[11px] text-ink-soft/70">
+                          {fmtTime(m.createdAt)}
+                        </span>
                       </div>
                     </div>
                   </div>
-                )
+                );
               })}
-            </div>
 
+              {/* Typing indicator behaves like a new message */}
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="flex items-center gap-1 px-4 py-3 bg-white border border-border rounded-2xl rounded-bl-md">
+                    <span className="w-2 h-2 bg-ink-soft rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-2 h-2 bg-ink-soft rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-2 h-2 bg-ink-soft rounded-full animate-bounce" />
+                  </div>
+                </div>
+              )}
+            </div>
             {showAttach && (
               <div className="px-4 sm:px-5 pt-2">
                 <input
@@ -723,7 +989,7 @@ export default function Chat() {
               </button>
               <input
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={handleDraftChange}
                 placeholder={`Message ${activeChat.isGroup ? '#' + activeChat.name : activeChat.name}…`}
                 className="flex-1 px-4 py-2.5 rounded-2xl border border-border text-sm text-ink placeholder:text-ink-soft/60 focus:outline-none focus:border-accent-soft"
               />
@@ -742,12 +1008,12 @@ export default function Chat() {
           </div>
         )}
       </section>
-
+      {/* {console.log(activeChat)} */}
       {createGroupOpen && (
         <CreateGroupModal
           friends={friends}
           initialSelectedId={pendingGroupWithId}
-          currentUserId={user.id}
+          currentUserId={user.remoteId}
           onClose={() => {
             setCreateGroupOpen(false)
             setPendingGroupWithId(null)
@@ -776,6 +1042,12 @@ export default function Chat() {
             setActiveChatId(null)
             setMobileShowThread(false)
           }}
+          onLeave={()=>{
+              setChats((prev) => prev.filter((c) => c.id !== activeChat.id))
+      setActiveChatId(null)
+      setMobileShowThread(false)
+          }}
+
         />
       )}
 
