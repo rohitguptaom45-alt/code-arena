@@ -372,7 +372,7 @@ export const chatApi = {
   rename: (chatId, name) => request(`/chat/${chatId}`, { method: 'PATCH', body: { name } }),
   leaveGroup: (chatId) => request(`/chat/${chatId}/leave`, { method: 'DELETE' }),
   deleteGroup: (chatId) => request(`/chat/${chatId}`, { method: 'DELETE' }),
-  deleteChat: (chatId) => request(`/chat/${chatId}`, { method: 'DELETE' }),
+  deleteChat: (chatId) => request(`/chat/delete/${chatId}`, { method: 'DELETE' }),
 }
 
 export const notificationApi = {

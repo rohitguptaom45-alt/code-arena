@@ -1,24 +1,47 @@
 import { friendApi, chatApi, notificationApi, userSearchApi } from './api.js'
 
 export function normalizeChat(c, currentUserId) {
-  if (!c) return c
-  const adminId = c.admin?.id ?? c.adminId
-  const members = c.members || []
-  let otherUser = null
-  if (!c.isGroup) {
-    if (members.length) {
-      otherUser = members.map((m) => m.user).find((u) => u && u.id !== currentUserId) || null
-    } else if (c.userId) {
-      otherUser = { id: c.userId, username: c.name, avatar: c.avatar }
+    if (!c) return c;
+    
+
+    const adminId = c.admin?.id ?? c.adminId;
+    const chatMembers = c.members || [];
+    // console.log("normalize",adminId)
+
+    let members = [];
+
+    if (c.isGroup) {
+        // Group → all members
+        members = chatMembers.map((m) => m.user);
+    } else {
+        // Single chat → only the other user
+        const otherUser = chatMembers
+            .map((m) => m.user)
+            .find((u) => u && u.id !== currentUserId);
+
+        if (otherUser) {
+            members = [otherUser];
+        } else if (c.userId) {
+            // fallback if members isn't available
+            members = [{
+                id: c.userId,
+                username: c.name,
+                avatar: c.avatar
+            }];
+        }
     }
-  }
-  return {
-    ...c,
-    adminId,
-    isAdmin: !!currentUserId && !!adminId && adminId === currentUserId,
-    memberCount: members.length || c._count?.members || 0,
-    otherUser,
-  }
+ 
+
+    return {
+        ...c,
+        adminId,
+        members,
+        isAdmin:
+            !!currentUserId &&
+            !!adminId &&
+            adminId === currentUserId,
+        memberCount: members.length || c._count?.members || 0,
+    };
 }
 
 export async function searchUsersRemote(query) {
@@ -101,7 +124,9 @@ export async function respondFriendRequestRemote(requestId, accept, currentUserI
 export async function fetchMyChatsRemote(currentUserId) {
   try {
     const res = await chatApi.getMyChats()
+    
     const chats = (res?.data || []).map((c) => normalizeChat(c, currentUserId))
+   
     return { chats }
   } catch (err) {
     return { chats: [], error: err.message || "Couldn't load your chats." }
@@ -120,6 +145,7 @@ export async function fetchMyGroupsRemote() {
 export async function fetchChatDetailsRemote(chatId, populate = true) {
   try {
     const res = await chatApi.getDetails(chatId, populate)
+    
     return { chat: res?.community, success: true }
   } catch (err) {
     return { error: err.message || "Couldn't load this chat." }
