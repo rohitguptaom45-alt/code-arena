@@ -322,6 +322,7 @@ export default function Chat() {
     (state) => state.community.newMessagesAlert
   ) || [];
 
+
   useEffect(() => {
     getOrSaveFromStorage({
       key: SOCKET_EVENTS.NEW_MESSAGE_ALERT,
