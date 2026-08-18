@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8000/api/v1'
+const API_BASE = 'https://devarena-8h6q.onrender.com/api/v1'
 const ACCESS_TOKEN_KEY = 'codearena_access_token'
 const REFRESH_TOKEN_KEY = 'codearena_refresh_token'
 export function getAccessToken() {
@@ -372,7 +372,7 @@ export const chatApi = {
   rename: (chatId, name) => request(`/chat/${chatId}`, { method: 'PATCH', body: { name } }),
   leaveGroup: (chatId) => request(`/chat/${chatId}/leave`, { method: 'DELETE' }),
   deleteGroup: (chatId) => request(`/chat/${chatId}`, { method: 'DELETE' }),
-  deleteChat: (chatId) => request(`/chat/delete/${chatId}`, { method: 'DELETE' }),
+  deleteChat: (chatId) => request(`/chat/${chatId}`, { method: 'DELETE' }),
 }
 
 export const notificationApi = {
