@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client'
 import { getAccessToken } from './api.js'
-const SOCKET_URL = 'https://devarena-8h6q.onrender.com'
+const SOCKET_URL = 'http://localhost:8000'
 let socket = null
 export function getSocket() {
   if (socket) return socket

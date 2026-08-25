@@ -202,6 +202,11 @@ export async function registerUserRemoteFirst(form) {
       git: form.github,
       phone: form.phone?.trim() || null
     })
+    if(!res?.data?.user) {
+      return {
+        error: 'Registration failed. Please try again.',
+      }
+    }
     const loginRes = await api.login({
       email: (form.email || '').trim().toLowerCase(),
       password: form.password,
@@ -212,6 +217,7 @@ export async function registerUserRemoteFirst(form) {
         refreshToken: loginRes.data.refreshToken,
       })
     }
+
     const remoteUser = loginRes?.data?.user || res?.data
     const user = upsertLocalFromRemote(remoteUser)
     return {
@@ -219,13 +225,14 @@ export async function registerUserRemoteFirst(form) {
       source: 'remote',
     }
   } catch (err) {
-    const local = registerUser(form)
-    if (local.error) return local
-    return {
-      ...local,
-      source: 'local',
-      remoteError: err.message,
-    }
+    // const local = registerUser(form)
+    // if (local.error) return local
+    // return {
+    //   ...local,
+    //   source: 'local',
+    //   remoteError: err.message,
+    // }
+    console.log(err)
   }
 }
 export async function loginUserRemoteFirst(email, password) {
