@@ -3,15 +3,433 @@ import { useSelector } from 'react-redux'
 import { useSearchParams } from 'react-router-dom'
 import Editor from '@monaco-editor/react'
 import { quizzes, tutorials } from '../data/mockData.js'
-import { problemBank } from '../data/problems.js'
+import { problemBank as baseProblemBank } from '../data/problems.js'
 import { recordProblemSolved, addSubmission, getSubmissions } from '../utils/appData.js'
 import { fetchProblemRemote, fetchProblemTestCasesRemote, fetchPreloadedCodeRemote } from '../utils/problemApi.js'
 import DiscussionPanel from '../components/DiscussionPanel.jsx'
+
+// ───────────────────────── Extra problem set (LeetCode-style, Easy/Medium/Hard) ─────────────────────────
+// Merged into problemBank below. Each entry: id, title, statement, difficulty, tags, constraints,
+// timeComplexity, params, testCases, starter — same shape as the entries in ../data/problems.js
+const extraProblems = [
+  // ───────────────────────── EASY ─────────────────────────
+  {
+    id: 'two-sum',
+    title: 'Two Sum',
+    statement:
+      'Given an array of integers nums and an integer target, return the indices of the two numbers that add up to target. Assume exactly one valid pair exists, and you may not use the same element twice.',
+    difficulty: 'Easy',
+    tags: ['array', 'hash map'],
+    constraints: ['2 <= nums.length <= 10^4', '-10^9 <= nums[i], target <= 10^9', 'Exactly one valid answer exists'],
+    timeComplexity: 'Aim for O(n) time using a hash map, O(n) extra space',
+    params: ['nums', 'target'],
+    testCases: [
+      { args: [[2, 7, 11, 15], 9], expected: [0, 1] },
+      { args: [[3, 2, 4], 6], expected: [1, 2] },
+      { args: [[3, 3], 6], expected: [0, 1] },
+    ],
+    starter: 'function solve(nums, target) {\n  \n}\n',
+    unordered: true,
+  },
+  {
+    id: 'reverse-string-inplace',
+    title: 'Reverse String',
+    statement: 'Given an array of characters, return the array reversed.',
+    difficulty: 'Easy',
+    tags: ['string', 'two pointers'],
+    constraints: ['1 <= s.length <= 10^5'],
+    timeComplexity: 'Aim for O(n) time, O(1) extra space using two pointers',
+    params: ['s'],
+    testCases: [
+      { args: [['h', 'e', 'l', 'l', 'o']], expected: ['o', 'l', 'l', 'e', 'h'] },
+      { args: [['a', 'b']], expected: ['b', 'a'] },
+    ],
+    starter: 'function solve(s) {\n  \n}\n',
+  },
+  {
+    id: 'valid-parentheses',
+    title: 'Valid Parentheses',
+    statement:
+      "Given a string containing only the characters '(', ')', '{', '}', '[' and ']', determine whether every bracket is closed by the matching type in the correct order.",
+    difficulty: 'Easy',
+    tags: ['string', 'stack'],
+    constraints: ['1 <= s.length <= 10^4'],
+    timeComplexity: 'Aim for O(n) time, O(n) space using a stack',
+    params: ['s'],
+    testCases: [
+      { args: ['()[]{}'], expected: true },
+      { args: ['(]'], expected: false },
+      { args: ['([{}])'], expected: true },
+      { args: ['((('], expected: false },
+    ],
+    starter: 'function solve(s) {\n  \n}\n',
+  },
+  {
+    id: 'contains-duplicate',
+    title: 'Contains Duplicate',
+    statement: 'Given an array of integers, return true if any value appears at least twice, and false if every element is distinct.',
+    difficulty: 'Easy',
+    tags: ['array', 'hash set'],
+    constraints: ['1 <= nums.length <= 10^5', '-10^9 <= nums[i] <= 10^9'],
+    timeComplexity: 'Aim for O(n) time using a hash set, O(n) space',
+    params: ['nums'],
+    testCases: [
+      { args: [[1, 2, 3, 1]], expected: true },
+      { args: [[1, 2, 3, 4]], expected: false },
+      { args: [[1, 1, 1, 3, 3, 4, 3, 2, 4, 2]], expected: true },
+    ],
+    starter: 'function solve(nums) {\n  \n}\n',
+  },
+  {
+    id: 'single-number',
+    title: 'Single Number',
+    statement: 'Given a non-empty array where every element appears exactly twice except for one, find that single element.',
+    difficulty: 'Easy',
+    tags: ['array', 'bit manipulation'],
+    constraints: ['1 <= nums.length <= 3*10^4', 'Exactly one element appears once, rest appear exactly twice'],
+    timeComplexity: 'Aim for O(n) time, O(1) extra space (hint: XOR)',
+    params: ['nums'],
+    testCases: [
+      { args: [[2, 2, 1]], expected: 1 },
+      { args: [[4, 1, 2, 1, 2]], expected: 4 },
+      { args: [[1]], expected: 1 },
+    ],
+    starter: 'function solve(nums) {\n  \n}\n',
+  },
+  {
+    id: 'best-time-buy-sell-stock',
+    title: 'Best Time to Buy and Sell Stock',
+    statement:
+      'Given an array where prices[i] is the stock price on day i, find the maximum profit from buying on one day and selling on a later day. Return 0 if no profit is possible.',
+    difficulty: 'Easy',
+    tags: ['array', 'greedy'],
+    constraints: ['1 <= prices.length <= 10^5', '0 <= prices[i] <= 10^4'],
+    timeComplexity: 'Aim for O(n) time, O(1) extra space — single pass tracking the running minimum',
+    params: ['prices'],
+    testCases: [
+      { args: [[7, 1, 5, 3, 6, 4]], expected: 5 },
+      { args: [[7, 6, 4, 3, 1]], expected: 0 },
+      { args: [[2, 4, 1]], expected: 2 },
+    ],
+    starter: 'function solve(prices) {\n  \n}\n',
+  },
+  {
+    id: 'palindrome-number',
+    title: 'Palindrome Number',
+    statement: 'Given an integer, return true if it reads the same forwards and backwards, without converting the whole number to a string.',
+    difficulty: 'Easy',
+    tags: ['math'],
+    constraints: ['-2^31 <= x <= 2^31 - 1'],
+    timeComplexity: 'Aim for O(log10 n) time, O(1) extra space',
+    params: ['x'],
+    testCases: [
+      { args: [121], expected: true },
+      { args: [-121], expected: false },
+      { args: [10], expected: false },
+      { args: [12321], expected: true },
+    ],
+    starter: 'function solve(x) {\n  \n}\n',
+  },
+  {
+    id: 'missing-number',
+    title: 'Missing Number',
+    statement: 'Given an array containing n distinct numbers taken from the range 0 to n, find the one number missing from the range.',
+    difficulty: 'Easy',
+    tags: ['array', 'math', 'bit manipulation'],
+    constraints: ['n == nums.length', '1 <= n <= 10^4', '0 <= nums[i] <= n', 'All values are distinct'],
+    timeComplexity: 'Aim for O(n) time, O(1) extra space (hint: sum formula or XOR)',
+    params: ['nums'],
+    testCases: [
+      { args: [[3, 0, 1]], expected: 2 },
+      { args: [[0, 1]], expected: 2 },
+      { args: [[9, 6, 4, 2, 3, 5, 7, 0, 1]], expected: 8 },
+    ],
+    starter: 'function solve(nums) {\n  \n}\n',
+  },
+
+  // ───────────────────────── MEDIUM ─────────────────────────
+  {
+    id: 'group-anagrams',
+    title: 'Group Anagrams',
+    statement: 'Given an array of strings, group the ones that are anagrams of each other. Each group may be returned in any order, as may the groups themselves.',
+    difficulty: 'Medium',
+    tags: ['string', 'hash map', 'sorting'],
+    constraints: ['1 <= strs.length <= 10^4', '0 <= strs[i].length <= 100', 'Lowercase English letters only'],
+    timeComplexity: 'Aim for O(n * k log k) time where k is max string length, using a sorted-key hash map',
+    params: ['strs'],
+    testCases: [
+      {
+        args: [['eat', 'tea', 'tan', 'ate', 'nat', 'bat']],
+        expected: [['eat', 'tea', 'ate'], ['tan', 'nat'], ['bat']],
+      },
+      { args: [['']], expected: [['']] },
+      { args: [['a']], expected: [['a']] },
+    ],
+    starter: 'function solve(strs) {\n  \n}\n',
+    unordered: true,
+  },
+  {
+    id: 'longest-substring-no-repeat',
+    title: 'Longest Substring Without Repeating Characters',
+    statement: 'Given a string, find the length of the longest contiguous substring that has no repeated characters.',
+    difficulty: 'Medium',
+    tags: ['string', 'sliding window', 'hash map'],
+    constraints: ['0 <= s.length <= 5*10^4'],
+    timeComplexity: 'Aim for O(n) time using a sliding window, O(min(n, charset)) space',
+    params: ['s'],
+    testCases: [
+      { args: ['abcabcbb'], expected: 3 },
+      { args: ['bbbbb'], expected: 1 },
+      { args: ['pwwkew'], expected: 3 },
+      { args: [''], expected: 0 },
+    ],
+    starter: 'function solve(s) {\n  \n}\n',
+  },
+  {
+    id: 'product-except-self',
+    title: 'Product of Array Except Self',
+    statement:
+      'Given an array nums, return an array where each element is the product of every number in nums except itself, without using division.',
+    difficulty: 'Medium',
+    tags: ['array', 'prefix sum'],
+    constraints: ['2 <= nums.length <= 10^5', '-30 <= nums[i] <= 30'],
+    timeComplexity: 'Aim for O(n) time using prefix/suffix products, O(1) extra space besides output',
+    params: ['nums'],
+    testCases: [
+      { args: [[1, 2, 3, 4]], expected: [24, 12, 8, 6] },
+      { args: [[-1, 1, 0, -3, 3]], expected: [0, 0, 9, 0, 0] },
+    ],
+    starter: 'function solve(nums) {\n  \n}\n',
+  },
+  {
+    id: 'maximum-subarray',
+    title: 'Maximum Subarray',
+    statement: 'Given an integer array, find the contiguous subarray (containing at least one number) with the largest sum, and return that sum.',
+    difficulty: 'Medium',
+    tags: ['array', 'dynamic programming', 'divide and conquer'],
+    constraints: ['1 <= nums.length <= 10^5', '-10^4 <= nums[i] <= 10^4'],
+    timeComplexity: "Aim for O(n) time using Kadane's algorithm, O(1) extra space",
+    params: ['nums'],
+    testCases: [
+      { args: [[-2, 1, -3, 4, -1, 2, 1, -5, 4]], expected: 6 },
+      { args: [[1]], expected: 1 },
+      { args: [[5, 4, -1, 7, 8]], expected: 23 },
+    ],
+    starter: 'function solve(nums) {\n  \n}\n',
+  },
+  {
+    id: 'three-sum',
+    title: '3Sum',
+    statement:
+      'Given an array of integers, return all unique triplets [a, b, c] such that a + b + c = 0. The result should not contain duplicate triplets.',
+    difficulty: 'Medium',
+    tags: ['array', 'two pointers', 'sorting'],
+    constraints: ['3 <= nums.length <= 3000', '-10^5 <= nums[i] <= 10^5'],
+    timeComplexity: 'Aim for O(n^2) time by sorting first, then using two pointers per fixed element',
+    params: ['nums'],
+    testCases: [
+      { args: [[-1, 0, 1, 2, -1, -4]], expected: [[-1, -1, 2], [-1, 0, 1]] },
+      { args: [[0, 1, 1]], expected: [] },
+      { args: [[0, 0, 0]], expected: [[0, 0, 0]] },
+    ],
+    starter: 'function solve(nums) {\n  \n}\n',
+    unordered: true,
+  },
+  {
+    id: 'rotate-array',
+    title: 'Rotate Array',
+    statement: 'Given an array, rotate it to the right by k steps and return the rotated array.',
+    difficulty: 'Medium',
+    tags: ['array', 'two pointers'],
+    constraints: ['1 <= nums.length <= 10^5', '0 <= k <= 10^5'],
+    timeComplexity: 'Aim for O(n) time, O(1) extra space (hint: reverse the whole array, then reverse the two parts)',
+    params: ['nums', 'k'],
+    testCases: [
+      { args: [[1, 2, 3, 4, 5, 6, 7], 3], expected: [5, 6, 7, 1, 2, 3, 4] },
+      { args: [[-1, -100, 3, 99], 2], expected: [3, 99, -1, -100] },
+    ],
+    starter: 'function solve(nums, k) {\n  \n}\n',
+  },
+  {
+    id: 'top-k-frequent',
+    title: 'Top K Frequent Elements',
+    statement: 'Given an integer array and an integer k, return the k most frequent elements. The order of the result does not matter.',
+    difficulty: 'Medium',
+    tags: ['array', 'hash map', 'heap', 'sorting'],
+    constraints: ['1 <= nums.length <= 10^5', 'k is always valid: 1 <= k <= number of distinct elements'],
+    timeComplexity: 'Aim for O(n log n) time (a bucket-sort approach can reach O(n))',
+    params: ['nums', 'k'],
+    testCases: [
+      { args: [[1, 1, 1, 2, 2, 3], 2], expected: [1, 2] },
+      { args: [[1], 1], expected: [1] },
+    ],
+    starter: 'function solve(nums, k) {\n  \n}\n',
+    unordered: true,
+  },
+  {
+    id: 'search-rotated-sorted-array',
+    title: 'Search in Rotated Sorted Array',
+    statement:
+      'A sorted array of distinct integers has been rotated at an unknown pivot. Given the rotated array and a target value, return the index of the target, or -1 if it is not present.',
+    difficulty: 'Medium',
+    tags: ['array', 'binary search'],
+    constraints: ['1 <= nums.length <= 5000', 'All values in nums are unique'],
+    timeComplexity: 'Aim for O(log n) time using a modified binary search',
+    params: ['nums', 'target'],
+    testCases: [
+      { args: [[4, 5, 6, 7, 0, 1, 2], 0], expected: 4 },
+      { args: [[4, 5, 6, 7, 0, 1, 2], 3], expected: -1 },
+      { args: [[1], 0], expected: -1 },
+    ],
+    starter: 'function solve(nums, target) {\n  \n}\n',
+  },
+
+  // ───────────────────────── HARD ─────────────────────────
+  {
+    id: 'trapping-rain-water',
+    title: 'Trapping Rain Water',
+    statement:
+      'Given an array where each element represents the height of a bar of width 1, compute how much water can be trapped between the bars after it rains.',
+    difficulty: 'Hard',
+    tags: ['array', 'two pointers', 'dynamic programming'],
+    constraints: ['1 <= height.length <= 2*10^4', '0 <= height[i] <= 10^5'],
+    timeComplexity: 'Aim for O(n) time using two pointers, O(1) extra space',
+    params: ['height'],
+    testCases: [
+      { args: [[0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]], expected: 6 },
+      { args: [[4, 2, 0, 3, 2, 5]], expected: 9 },
+    ],
+    starter: 'function solve(height) {\n  \n}\n',
+  },
+  {
+    id: 'median-two-sorted-arrays',
+    title: 'Median of Two Sorted Arrays',
+    statement: 'Given two sorted arrays, return the median of the combined sorted array.',
+    difficulty: 'Hard',
+    tags: ['array', 'binary search', 'divide and conquer'],
+    constraints: ['0 <= nums1.length, nums2.length <= 1000', '1 <= nums1.length + nums2.length <= 2000'],
+    timeComplexity: 'Aim for O(log(min(m, n))) time using binary search on the smaller array',
+    params: ['nums1', 'nums2'],
+    testCases: [
+      { args: [[1, 3], [2]], expected: 2 },
+      { args: [[1, 2], [3, 4]], expected: 2.5 },
+      { args: [[0, 0], [0, 0]], expected: 0 },
+    ],
+    starter: 'function solve(nums1, nums2) {\n  \n}\n',
+  },
+  {
+    id: 'sliding-window-maximum',
+    title: 'Sliding Window Maximum',
+    statement:
+      'Given an array and a window size k, slide the window from the very left to the very right of the array, and return the maximum value inside the window at each position.',
+    difficulty: 'Hard',
+    tags: ['array', 'sliding window', 'deque'],
+    constraints: ['1 <= nums.length <= 10^5', '1 <= k <= nums.length'],
+    timeComplexity: 'Aim for O(n) time using a monotonic deque, O(k) extra space',
+    params: ['nums', 'k'],
+    testCases: [
+      { args: [[1, 3, -1, -3, 5, 3, 6, 7], 3], expected: [3, 3, 5, 5, 6, 7] },
+      { args: [[1], 1], expected: [1] },
+    ],
+    starter: 'function solve(nums, k) {\n  \n}\n',
+  },
+  {
+    id: 'edit-distance',
+    title: 'Edit Distance',
+    statement:
+      'Given two strings word1 and word2, return the minimum number of single-character insertions, deletions, or substitutions required to turn word1 into word2.',
+    difficulty: 'Hard',
+    tags: ['string', 'dynamic programming'],
+    constraints: ['0 <= word1.length, word2.length <= 500'],
+    timeComplexity: 'Aim for O(m * n) time and space using 2D dynamic programming',
+    params: ['word1', 'word2'],
+    testCases: [
+      { args: ['horse', 'ros'], expected: 3 },
+      { args: ['intention', 'execution'], expected: 5 },
+      { args: ['', 'abc'], expected: 3 },
+    ],
+    starter: 'function solve(word1, word2) {\n  \n}\n',
+  },
+  {
+    id: 'largest-rectangle-histogram',
+    title: 'Largest Rectangle in Histogram',
+    statement:
+      'Given an array of bar heights forming a histogram where each bar has width 1, find the area of the largest rectangle that fits entirely within the histogram.',
+    difficulty: 'Hard',
+    tags: ['array', 'stack'],
+    constraints: ['1 <= heights.length <= 10^5', '0 <= heights[i] <= 10^4'],
+    timeComplexity: 'Aim for O(n) time using a monotonic increasing stack',
+    params: ['heights'],
+    testCases: [
+      { args: [[2, 1, 5, 6, 2, 3]], expected: 10 },
+      { args: [[2, 4]], expected: 4 },
+    ],
+    starter: 'function solve(heights) {\n  \n}\n',
+  },
+  {
+    id: 'first-missing-positive',
+    title: 'First Missing Positive',
+    statement: 'Given an unsorted integer array, find the smallest missing positive integer.',
+    difficulty: 'Hard',
+    tags: ['array', 'in-place hashing'],
+    constraints: ['1 <= nums.length <= 10^5', '-2^31 <= nums[i] <= 2^31 - 1'],
+    timeComplexity: 'Aim for O(n) time, O(1) extra space by placing each value at its own index in place',
+    params: ['nums'],
+    testCases: [
+      { args: [[1, 2, 0]], expected: 3 },
+      { args: [[3, 4, -1, 1]], expected: 2 },
+      { args: [[7, 8, 9, 11, 12]], expected: 1 },
+    ],
+    starter: 'function solve(nums) {\n  \n}\n',
+  },
+  {
+    id: 'longest-valid-parentheses',
+    title: 'Longest Valid Parentheses',
+    statement: "Given a string containing only '(' and ')', find the length of the longest contiguous substring that forms valid parentheses.",
+    difficulty: 'Hard',
+    tags: ['string', 'stack', 'dynamic programming'],
+    constraints: ['0 <= s.length <= 3*10^4'],
+    timeComplexity: 'Aim for O(n) time using a stack of indices, O(n) space',
+    params: ['s'],
+    testCases: [
+      { args: ['(()'], expected: 2 },
+      { args: [')()())'], expected: 4 },
+      { args: [''], expected: 0 },
+    ],
+    starter: 'function solve(s) {\n  \n}\n',
+  },
+  {
+    id: 'n-queens-count',
+    title: 'N-Queens (Count Solutions)',
+    statement:
+      'The n-queens puzzle asks you to place n queens on an n x n chessboard so that no two queens attack each other. Given n, return the total number of distinct solutions.',
+    difficulty: 'Hard',
+    tags: ['backtracking', 'recursion'],
+    constraints: ['1 <= n <= 9'],
+    timeComplexity: 'Backtracking with column/diagonal pruning; roughly O(n!) worst case but pruned heavily in practice',
+    params: ['n'],
+    testCases: [
+      { args: [4], expected: 2 },
+      { args: [1], expected: 1 },
+      { args: [8], expected: 92 },
+    ],
+    starter: 'function solve(n) {\n  \n}\n',
+  },
+]
+
+// Merge the built-in problem bank (from data/problems.js) with the extra set above.
+const problemBank = [...baseProblemBank, ...extraProblems]
+
 const modes = [
   {
     id: 'compiler',
     label: '💻 Compiler',
     desc: 'Write & run code',
+  },
+  {
+    id: 'playground',
+    label: '🛝 Playground',
+    desc: 'Free-form learning compiler',
   },
   {
     id: 'quizzes',
@@ -43,6 +461,7 @@ export default function CodeEditor() {
       </div>
 
       {mode === 'compiler' && <CompilerView />}
+      {mode === 'playground' && <PlaygroundView />}
       {mode === 'quizzes' && <QuizzesView />}
       {mode === 'tutorials' && <TutorialsView />}
     </div>
@@ -133,7 +552,7 @@ try:
 except Exception as e:
     print("__ERR__" + str(e))
 `
-    const res = await runViaPiston('python', driver, '')
+    const res = await runViaJudge0('python', driver, '')
     if (res.error) {
       results.push({
         pass: false,
@@ -174,21 +593,71 @@ except Exception as e:
     results,
   }
 }
+// ───────────────────────── Piston (public, free, no signup/API key) ─────────────────────────
 const PISTON_ALIASES = {
   python: ['python', 'python3'],
   java: ['java'],
   cpp: ['c++', 'cpp', 'g++'],
 }
+// Piston's compilers (javac, g++) pick behavior off the file extension, and
+// Java additionally requires the filename to match the public class name.
+const PISTON_FILENAMES = {
+  python: 'main.py',
+  java: 'Main.java',
+  cpp: 'main.cpp',
+}
+const PISTON_FALLBACK_RUNTIMES = {
+  python: {
+    language: 'python',
+    version: '3.10.0',
+  },
+  java: {
+    language: 'java',
+    version: '15.0.2',
+  },
+  cpp: {
+    language: 'c++',
+    version: '10.2.0',
+  },
+}
 let runtimesCache = null
 let runtimesCacheAt = 0
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function withRetries(fn, attempts = 3, delayMs = 900) {
+  let lastErr
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, delayMs * (i + 1)))
+    }
+  }
+  throw lastErr
+}
+
 async function getRuntimes() {
   if (runtimesCache && Date.now() - runtimesCacheAt < 10 * 60 * 1000) return runtimesCache
-  const res = await fetch('https://emkc.org/api/v2/piston/runtimes')
+  const res = await fetchWithTimeout('https://emkc.org/api/v2/piston/runtimes', {}, 10000)
   if (!res.ok) throw new Error(`Couldn't load compiler runtime list (${res.status}).`)
   runtimesCache = await res.json()
   runtimesCacheAt = Date.now()
   return runtimesCache
 }
+
 async function resolveRuntime(languageId) {
   const wanted = PISTON_ALIASES[languageId] || [languageId]
   try {
@@ -200,23 +669,10 @@ async function resolveRuntime(languageId) {
         version: match.version,
       }
   } catch {}
-  const fallback = {
-    python: {
-      language: 'python',
-      version: '3.10.0',
-    },
-    java: {
-      language: 'java',
-      version: '15.0.2',
-    },
-    cpp: {
-      language: 'c++',
-      version: '10.2.0',
-    },
-  }
-  return fallback[languageId] || null
+  return PISTON_FALLBACK_RUNTIMES[languageId] || null
 }
-async function runViaPiston(languageId, code, stdin) {
+
+async function runViaJudge0(languageId, code, stdin) {
   const runtime = await resolveRuntime(languageId)
   if (!runtime)
     return {
@@ -224,27 +680,34 @@ async function runViaPiston(languageId, code, stdin) {
       error: 'Unsupported language.',
     }
   try {
-    const res = await fetch('https://emkc.org/api/v2/piston/execute', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        language: runtime.language,
-        version: runtime.version,
-        files: [
-          {
-            content: code,
+    const res = await withRetries(() =>
+      fetchWithTimeout(
+        'https://emkc.org/api/v2/piston/execute',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-        ],
-        stdin: stdin || '',
-      }),
-    })
+          body: JSON.stringify({
+            language: runtime.language,
+            version: runtime.version,
+            files: [
+              {
+                name: PISTON_FILENAMES[languageId] || `main.${languageId}`,
+                content: code,
+              },
+            ],
+            stdin: stdin || '',
+          }),
+        },
+        15000
+      )
+    )
     const data = await res.json().catch(() => null)
     if (!res.ok)
       return {
         output: '',
-        error: `Compiler service error (${res.status}): ${data?.message || 'Try again in a moment.'}`,
+        error: `Compiler service error (${res.status}): ${data?.message || 'The public Piston service may be rate-limited right now — try again shortly.'}`,
       }
     if (!data)
       return {
@@ -268,12 +731,17 @@ async function runViaPiston(languageId, code, stdin) {
       error: data.message || 'Execution failed.',
     }
   } catch (err) {
+    const timedOut = err.name === 'AbortError'
     return {
       output: '',
-      error: `Couldn't reach the compiler service — check your internet connection. (${err.message})`,
+      error: timedOut
+        ? 'The compiler service timed out after a few retries — it may be overloaded right now. Try again in a bit.'
+        : `Couldn't reach the compiler service — check your internet connection. (${err.message})`,
     }
   }
 }
+  
+
 function pythonStub(problem) {
   return `def solve(${problem.params.join(', ')}):\n    pass\n`
 }
@@ -294,6 +762,174 @@ const difficultyColors = {
   Medium: 'bg-warning/10 text-warning',
   Hard: 'bg-danger/10 text-danger',
 }
+
+// ───────────────────────── Playground (free-form learning compiler) ─────────────────────────
+const playgroundStarters = {
+  javascript: '// Write any JavaScript here — use console.log to print output\nconsole.log("Hello, world!")\n',
+  python: '# Write any Python here — use print to show output\nprint("Hello, world!")\n',
+  java: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, world!");\n    }\n}\n',
+  cpp: '#include <iostream>\n\nint main() {\n    std::cout << "Hello, world!" << std::endl;\n    return 0;\n}\n',
+}
+function runJsFreeform(code) {
+  const logs = []
+  const stringify = (v) => (typeof v === 'string' ? v : (() => {
+    try {
+      return JSON.stringify(v)
+    } catch {
+      return String(v)
+    }
+  })())
+  const fakeConsole = {
+    log: (...args) => logs.push(args.map(stringify).join(' ')),
+    error: (...args) => logs.push(args.map(stringify).join(' ')),
+    warn: (...args) => logs.push(args.map(stringify).join(' ')),
+  }
+  try {
+    const fn = new Function('console', code)
+    fn(fakeConsole)
+    return {
+      output: logs.length ? logs.join('\n') : '(no output — use console.log(...) to print something)',
+      error: null,
+    }
+  } catch (err) {
+    return {
+      output: logs.join('\n'),
+      error: err.message,
+    }
+  }
+}
+function PlaygroundView() {
+  const [language, setLanguage] = useState('javascript')
+  const [code, setCode] = useState(playgroundStarters.javascript)
+  const [stdin, setStdin] = useState('')
+  const [output, setOutput] = useState('Run your code to see output here.')
+  const [running, setRunning] = useState(false)
+  const [theme, setTheme] = useState('light')
+
+  useEffect(() => {
+    setCode(playgroundStarters[language] || '')
+    setOutput('Run your code to see output here.')
+  }, [language])
+
+  const handleRun = async () => {
+    setRunning(true)
+    if (language === 'javascript') {
+      const r = runJsFreeform(code)
+      setOutput(r.error ? `${r.output ? r.output + '\n\n' : ''}❌ ${r.error}` : r.output)
+    } else {
+      const r = await runViaJudge0(language, code, stdin)
+      setOutput(r.error ? `❌ ${r.error}` : r.output)
+    }
+    setRunning(false)
+  }
+
+  const handleClear = () => {
+    setCode('')
+    setOutput('Run your code to see output here.')
+  }
+
+  const handleReset = () => {
+    setCode(playgroundStarters[language] || '')
+    setOutput('Run your code to see output here.')
+  }
+
+  return (
+    <div className={theme === 'dark' ? 'bg-ink' : 'bg-white'}>
+      <div className="max-w-[1400px] mx-auto grid lg:grid-cols-[1.6fr_1fr] gap-0 min-h-[calc(100vh-112px)]">
+        <div className="border-r border-border flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-bg-soft gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="text-sm font-medium bg-white border border-border rounded-xl px-3 py-1.5"
+              >
+                {languages.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs text-ink-soft truncate">
+                Free-form scratchpad — edit and run anything, nothing is graded.
+              </span>
+            </div>
+            <button
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              className="text-sm px-3 py-1.5 rounded-xl border border-border hover:bg-white shrink-0"
+            >
+              {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+            </button>
+          </div>
+          <div className="flex-1 min-h-0">
+            <Editor
+              height="100%"
+              language={MONACO_LANG[language] || 'plaintext'}
+              value={code}
+              onChange={(value) => setCode(value ?? '')}
+              theme={theme === 'dark' ? 'vs-dark' : 'vs'}
+              options={{
+                fontSize: 14,
+                minimap: {
+                  enabled: false,
+                },
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 2,
+                wordWrap: 'on',
+                padding: {
+                  top: 12,
+                },
+              }}
+              loading={<div className="h-full grid place-items-center text-sm text-ink-soft">Loading editor…</div>}
+            />
+          </div>
+          <div className="flex gap-3 px-4 py-3 border-t border-border bg-bg-soft">
+            <button
+              onClick={handleRun}
+              disabled={running}
+              className="px-5 py-2 rounded-2xl bg-accent text-white font-semibold text-sm hover:bg-accent-hover disabled:opacity-50"
+            >
+              {running ? 'Running…' : '▶ Run code'}
+            </button>
+            <button
+              onClick={handleReset}
+              className="px-5 py-2 rounded-2xl border border-border font-semibold text-sm text-ink hover:bg-white"
+            >
+              Reset to example
+            </button>
+            <button
+              onClick={handleClear}
+              className="px-5 py-2 rounded-2xl border border-border font-semibold text-sm text-ink hover:bg-white"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col">
+          {language !== 'javascript' && (
+            <div className="border-b border-border p-4">
+              <p className="text-xs font-semibold text-ink-soft mb-2 uppercase tracking-wide">Stdin (optional)</p>
+              <textarea
+                value={stdin}
+                onChange={(e) => setStdin(e.target.value)}
+                rows={4}
+                placeholder="Type any input your program reads from stdin…"
+                className="w-full text-xs font-mono border border-border rounded-xl p-3"
+              />
+            </div>
+          )}
+          <div className="flex-1 overflow-y-auto">
+            <p className="text-xs font-semibold text-ink-soft uppercase tracking-wide px-4 pt-4">Output</p>
+            <pre className="p-4 font-mono text-xs whitespace-pre-wrap text-ink-soft">{output}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function SubmissionsPanel({ problem, user, theme }) {
   const mine = user ? getSubmissions(problem.id, user.username) : []
   const [expanded, setExpanded] = useState(null)
@@ -475,7 +1111,7 @@ function CompilerView() {
     setActiveTab('console')
     if (problem.isRemote) {
       const tc = problem.testCases[0]
-      const r = await runViaPiston(language, code, tc?.input || '')
+      const r = await runViaJudge0(language, code, tc?.input || '')
       setOutput(
         r.error
           ? `❌ ${r.error}`
@@ -497,7 +1133,7 @@ function CompilerView() {
       })
       setOutput(formatResults(r.results, false))
     } else {
-      const r = await runViaPiston(language, code, '')
+      const r = await runViaJudge0(language, code, '')
       setOutput(r.error ? `❌ ${r.error}` : r.output)
     }
     setRunning(false)
@@ -508,7 +1144,7 @@ function CompilerView() {
     if (problem.isRemote) {
       const results = []
       for (const tc of problem.testCases) {
-        const r = await runViaPiston(language, code, tc.input)
+        const r = await runViaJudge0(language, code, tc.input)
         const pass = !r.error && r.output.trim() === (tc.output || '').trim()
         results.push({ pass, actual: r.error ? r.error : r.output, expected: tc.output, args: [tc.input] })
       }
@@ -678,7 +1314,7 @@ function CompilerView() {
                   </div>
 
                   {problem.constraints?.length > 0 && (
-                    <div>
+                    <div className="mb-4">
                       <h3 className={`font-semibold text-sm mb-2 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>
                         Constraints
                       </h3>
@@ -687,6 +1323,15 @@ function CompilerView() {
                           <li key={i}>• {c}</li>
                         ))}
                       </ul>
+                    </div>
+                  )}
+
+                  {problem.timeComplexity && (
+                    <div>
+                      <h3 className={`font-semibold text-sm mb-2 ${theme === 'dark' ? 'text-white' : 'text-ink'}`}>
+                        Time complexity target
+                      </h3>
+                      <div className="text-xs font-mono bg-muted rounded-xl p-3">⏱ {problem.timeComplexity}</div>
                     </div>
                   )}
                 </>
