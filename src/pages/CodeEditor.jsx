@@ -444,6 +444,12 @@ const modes = [
 ]
 export default function CodeEditor() {
   const [mode, setMode] = useState('compiler')
+  const [searchParams] = useSearchParams()
+  const problemIdParam = searchParams.get('problemId')
+  const contestIdParam = searchParams.get('contestId')
+  useEffect(() => {
+    if (problemIdParam || contestIdParam) setMode('compiler')
+  }, [problemIdParam, contestIdParam])
   return (
     <div className="bg-white">
       <div className="border-b border-border bg-bg-soft/60">
@@ -740,8 +746,6 @@ async function runViaJudge0(languageId, code, stdin) {
     }
   }
 }
-  
-
 function pythonStub(problem) {
   return `def solve(${problem.params.join(', ')}):\n    pass\n`
 }

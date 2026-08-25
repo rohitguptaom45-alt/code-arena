@@ -96,6 +96,15 @@ function formatCountdown(ms) {
   parts.push(`${s}s`)
   return parts.join(' ')
 }
+const difficultyColors = {
+  Easy: 'bg-success/10 text-success',
+  Medium: 'bg-warning/10 text-warning',
+  Hard: 'bg-danger/10 text-danger',
+}
+function capitalize(s) {
+  if (!s) return s
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
 function CommentReplies({ commentId, user }) {
   const [open, setOpen] = useState(false)
   const [replies, setReplies] = useState(null)
@@ -163,6 +172,65 @@ function CommentReplies({ commentId, user }) {
     </div>
   )
 }
+function ProblemCard({ problem, index, contestId, canSolve, status, locked }) {
+  const p = problem
+  const diffLabel = capitalize(p.difficulty)
+  const diffClass = difficultyColors[diffLabel] || 'bg-muted text-ink-soft'
+  const solveHref = `/editor?contestId=${contestId}&problemId=${p.id}`
+
+  let ctaLabel = 'Solve'
+  let ctaIcon = '▶'
+  if (status === 'ended') {
+    ctaLabel = 'Practice'
+    ctaIcon = '↻'
+  } else if (status === 'upcoming') {
+    ctaLabel = 'Locked'
+    ctaIcon = '🔒'
+  }
+
+  return (
+    <div className="group relative border border-border rounded-2xl p-4 hover:border-accent hover:shadow-soft transition-all bg-white">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <span className="w-7 h-7 shrink-0 rounded-full bg-bg-soft text-ink-soft text-xs font-semibold grid place-items-center mt-0.5">
+            {index + 1}
+          </span>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-sm text-ink truncate">{p.title}</h3>
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${diffClass}`}>{diffLabel}</span>
+              {p.tags?.slice(0, 3).map((t) => (
+                <span key={t} className="px-2 py-0.5 rounded-full bg-muted text-[10px] text-ink-soft">
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {canSolve && !locked ? (
+          <Link
+            to={solveHref}
+            className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors ${
+              status === 'ended'
+                ? 'bg-bg-soft text-ink hover:bg-muted'
+                : 'bg-accent text-white hover:bg-accent-hover shadow-soft'
+            }`}
+          >
+            <span>{ctaIcon}</span> {ctaLabel}
+          </Link>
+        ) : (
+          <span
+            title={status === 'upcoming' ? 'Unlocks when the contest starts' : 'Join the contest to unlock'}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-bg-soft text-ink-soft/70 cursor-not-allowed"
+          >
+            🔒 {status === 'upcoming' ? 'Locked' : 'Join to solve'}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
 export default function ContestDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -215,6 +283,10 @@ export default function ContestDetails() {
   const isOwner = user && contest.createdBy === user.username
   const { startMs, endMs } = useMemo(() => getContestTimes(contest), [contest])
   const status = now < startMs ? 'upcoming' : now < endMs ? 'live' : 'ended'
+  // Owners can always preview their own problems; everyone else must join first,
+  // and problems stay locked until the contest actually starts.
+  const canSolve = alreadyRegistered || isOwner
+  const problemsLocked = status === 'upcoming' && !isOwner
   useEffect(() => {
     if (contest.remote) {
       fetchContestCommentsRemote(contest.id).then((res) =>
@@ -461,6 +533,23 @@ export default function ContestDetails() {
         </div>
       )}
 
+      {alreadyRegistered && status === 'live' && (contest.remote ? remoteProblems.length > 0 : contest.problems?.length > 0) && (
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 rounded-2xl bg-gradient-to-br from-ink to-ink-soft text-white">
+          <div>
+            <p className="font-display font-bold text-base">You're in — the compiler's ready. 🚀</p>
+            <p className="text-xs text-white/70 mt-0.5">
+              Pick a problem below and hit Solve to jump straight into the editor.
+            </p>
+          </div>
+          <a
+            href="#problems"
+            className="shrink-0 px-4 py-2 rounded-xl bg-white text-ink text-sm font-semibold hover:bg-white/90 text-center"
+          >
+            Jump to problems ↓
+          </a>
+        </div>
+      )}
+
       <div className="grid md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-8">
           <section>
@@ -473,51 +562,86 @@ export default function ContestDetails() {
           </section>
 
           {contest.remote && remoteProblems.length > 0 && (
-            <section>
-              <h2 className="font-display font-bold text-xl text-ink mb-3">Problems</h2>
+            <section id="problems" className="scroll-mt-20">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display font-bold text-xl text-ink">Problems</h2>
+                <span className="text-xs text-ink-soft">{remoteProblems.length} problem{remoteProblems.length > 1 ? 's' : ''}</span>
+              </div>
+
+              {!canSolve && (
+                <div className="mb-3 px-4 py-2.5 rounded-2xl bg-accent/10 border border-accent/20 text-sm text-accent">
+                  🔒 Join the contest to unlock problems and start solving.
+                </div>
+              )}
+              {canSolve && problemsLocked && (
+                <div className="mb-3 px-4 py-2.5 rounded-2xl bg-bg-soft border border-border text-sm text-ink-soft">
+                  You're registered — problems unlock automatically when the contest goes live in{' '}
+                  <strong className="text-ink">{formatCountdown(startMs - now)}</strong>.
+                </div>
+              )}
+
               <div className="space-y-3">
                 {remoteProblems.map((p, i) => (
-                  <Link
+                  <ProblemCard
                     key={p.id}
-                    to={`/editor?contestId=${contest.id}&problemId=${p.id}`}
-                    className="block border border-border rounded-2xl p-4 hover:border-accent transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-sm text-ink">
-                        {i + 1}. {p.title}
-                      </h3>
-                      <span className="text-xs text-ink-soft capitalize">{p.difficulty}</span>
-                    </div>
-                    {p.tags?.length > 0 && (
-                      <div className="flex gap-1.5 mt-2 flex-wrap">
-                        {p.tags.map((t) => (
-                          <span key={t} className="px-2 py-0.5 rounded-full bg-muted text-[11px] text-ink-soft">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </Link>
+                    problem={p}
+                    index={i}
+                    contestId={contest.id}
+                    canSolve={canSolve}
+                    locked={problemsLocked}
+                    status={status}
+                  />
                 ))}
               </div>
             </section>
           )}
 
           {!contest.remote && contest.isCustom && contest.problems?.length > 0 && (
-            <section>
-              <h2 className="font-display font-bold text-xl text-ink mb-3">Problems</h2>
+            <section id="problems" className="scroll-mt-20">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display font-bold text-xl text-ink">Problems</h2>
+                <span className="text-xs text-ink-soft">
+                  {contest.problems.length} problem{contest.problems.length > 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {!canSolve && (
+                <div className="mb-3 px-4 py-2.5 rounded-2xl bg-accent/10 border border-accent/20 text-sm text-accent">
+                  🔒 Join the contest to unlock the full problem set.
+                </div>
+              )}
+
               <div className="space-y-3">
                 {contest.problems.map((p, i) => (
-                  <div key={i} className="border border-border rounded-2xl p-4">
-                    <h3 className="font-semibold text-sm text-ink mb-1">
-                      {i + 1}. {p.title}
-                    </h3>
-                    {p.statement && <p className="text-sm text-ink-soft mb-2">{p.statement}</p>}
-                    {(p.sampleInput || p.sampleOutput) && (
-                      <div className="font-mono text-xs bg-muted rounded-xl p-3">
-                        {p.sampleInput && <div>Input: {p.sampleInput}</div>}
-                        {p.sampleOutput && <div>Output: {p.sampleOutput}</div>}
-                      </div>
+                  <div
+                    key={i}
+                    className={`border border-border rounded-2xl p-4 transition-all ${canSolve ? 'bg-white' : 'bg-bg-soft/60'}`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-semibold text-sm text-ink flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-bg-soft text-ink-soft text-xs font-semibold grid place-items-center">
+                          {i + 1}
+                        </span>
+                        {p.title}
+                      </h3>
+                      {!canSolve && <span className="text-xs text-ink-soft/70">🔒 Locked</span>}
+                    </div>
+                    {canSolve ? (
+                      <>
+                        {p.statement && <p className="text-sm text-ink-soft mt-2 mb-2">{p.statement}</p>}
+                        {(p.sampleInput || p.sampleOutput) && (
+                          <div className="font-mono text-xs bg-muted rounded-xl p-3">
+                            {p.sampleInput && <div>Input: {p.sampleInput}</div>}
+                            {p.sampleOutput && <div>Output: {p.sampleOutput}</div>}
+                          </div>
+                        )}
+                        <p className="text-[11px] text-ink-soft/70 mt-2">
+                          Guided compiler support for custom problems is on the way — for now, work through it in
+                          your own editor and share your approach in the discussion below.
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-ink-soft/70 mt-1">Register to view the full statement.</p>
                     )}
                   </div>
                 ))}
@@ -677,6 +801,14 @@ export default function ContestDetails() {
                 >
                   ✅ Registered
                 </button>
+                {(contest.remote ? remoteProblems.length > 0 : contest.problems?.length > 0) && (
+                  <a
+                    href="#problems"
+                    className="w-full block text-center py-2.5 rounded-2xl bg-accent text-white font-semibold hover:bg-accent-hover"
+                  >
+                    {status === 'ended' ? '↻ Practice problems' : '▶ Start solving'}
+                  </a>
+                )}
                 {contest.remote && (
                   <button
                     onClick={handleLeave}
