@@ -600,6 +600,8 @@ except Exception as e:
   }
 }
 // ───────────────────────── Piston (public, free, no signup/API key) ─────────────────────────
+// Used only for the freeform Playground and for non-graded languages in the Compiler.
+// Remote (contest) problems now go through our own backend — see runProblemRemote / submitProblemRemote below.
 const PISTON_ALIASES = {
   python: ['python', 'python3'],
   java: ['java'],
@@ -746,6 +748,53 @@ async function runViaJudge0(languageId, code, stdin) {
     }
   }
 }
+
+// ───────────────────────── Our backend compiler APIs (contest / remote problems) ─────────────────────────
+// Base server URL — reuse wherever the rest of the app already defines it (e.g. utils/api.js),
+// swap this out instead of duplicating if that already exists.
+const server = import.meta.env.VITE_API_URL
+
+// POST {{server}}/api/v1/execute/:problemId/run
+async function runProblemRemote(problemId, languageId, sourceCode) {
+  try {
+    const res = await fetch(`${server}/api/v1/execute/${problemId}/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ languageId, sourceCode }),
+      credentials: 'include', // include cookies for session auth
+    })
+    return await res.json()
+  } catch (err) {
+    return { success: false, message: err.message }
+  }
+}
+
+// POST {{server}}/api/v1/execute/:contestId/:problemId/submit
+async function submitProblemRemote(contestId, problemId, languageId, sourceCode) {
+  try {
+    const res = await fetch(`${server}/api/v1/execute/${contestId}/${problemId}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ languageId, sourceCode }),
+      credentials: 'include',
+    })
+    return await res.json()
+  } catch (err) {
+    return { success: false, message: err.message }
+  }
+}
+
+// Backend sends { testcase, passed, input, expectedOutput, actualOutput, status, time, memory }.
+// formatResults() below expects { pass, actual, expected, args }, so map field names here.
+function mapBackendResults(backendResults) {
+  return (backendResults || []).map((r) => ({
+    pass: r.passed,
+    actual: r.actualOutput,
+    expected: r.expectedOutput,
+    args: [r.input],
+  }))
+}
+
 function pythonStub(problem) {
   return `def solve(${problem.params.join(', ')}):\n    pass\n`
 }
@@ -1110,17 +1159,18 @@ function CompilerView() {
   }, [language, problem.id])
   const timeStr = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
   const isGraded = GRADED_LANGUAGES.includes(language)
+
   const handleRun = async () => {
     setRunning(true)
     setActiveTab('console')
     if (problem.isRemote) {
-      const tc = problem.testCases[0]
-      const r = await runViaJudge0(language, code, tc?.input || '')
-      setOutput(
-        r.error
-          ? `❌ ${r.error}`
-          : `Output:\n${r.output}\n\n${tc ? `Expected:\n${tc.output}` : '(no sample test case provided)'}`
-      )
+      const r = await runProblemRemote(problem.id, language, code)
+      if (!r.success) {
+        setOutput(`❌ ${r.message || 'Run failed'}`)
+      } else {
+        const mapped = mapBackendResults(r.data.results)
+        setOutput(formatResults(mapped, false) + `\n\n${r.data.passed}/${r.data.total} passed`)
+      }
       setRunning(false)
       return
     }
@@ -1142,27 +1192,27 @@ function CompilerView() {
     }
     setRunning(false)
   }
+
   const handleSubmit = async () => {
     setRunning(true)
     setActiveTab('console')
     if (problem.isRemote) {
-      const results = []
-      for (const tc of problem.testCases) {
-        const r = await runViaJudge0(language, code, tc.input)
-        const pass = !r.error && r.output.trim() === (tc.output || '').trim()
-        results.push({ pass, actual: r.error ? r.error : r.output, expected: tc.output, args: [tc.input] })
+      const r = await submitProblemRemote(remoteContestId, problem.id, language, code)
+      if (!r.success) {
+        setOutput(`❌ ${r.message || 'Submit failed'}`)
+        setRunning(false)
+        return
       }
-      const passedCount = results.filter((x) => x.pass).length
-      const total = results.length
-      const allPassed = total > 0 && passedCount === total
-      setLastRun({ results })
+      const { passed, total, allPassed } = r.data
+      const mapped = mapBackendResults(r.data.results)
+      setLastRun({ results: mapped })
       if (user) {
-        addSubmission(problem.id, user.username, { language, code, passed: allPassed, passedCount, total })
+        addSubmission(problem.id, user.username, { language, code, passed: allPassed, passedCount: passed, total })
         if (allPassed) recordProblemSolved(user.username)
       }
       setOutput(
-        `${allPassed ? '✅' : '⚠️'} ${passedCount}/${total} test cases passed\n\n` +
-          formatResults(results, true) +
+        `${allPassed ? '✅' : '⚠️'} ${passed}/${total} test cases passed\n\n` +
+          formatResults(mapped, true) +
           (allPassed
             ? user
               ? '\n\n+10 points added to your account. Streak updated.'
