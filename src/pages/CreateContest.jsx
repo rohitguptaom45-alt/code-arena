@@ -49,8 +49,6 @@ export default function CreateContest() {
     difficulty: 'Medium',
     startDateTime: '',
     endDateTime: '',
-    entryFeeType: 'free',
-    entryFeePoints: 0,
     prizePool: '',
     totalPoints: 500,
     visibility: 'public',
@@ -167,7 +165,7 @@ export default function CreateContest() {
         duration: durationMins >= 60 ? `${Math.round((durationMins / 60) * 10) / 10} hr` : `${durationMins} min`,
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
-        entryFee: form.entryFeeType === 'free' ? 'Free' : `${form.entryFeePoints} pts`,
+        entryFee: 'Free',
         prizePool: form.prizePool.trim() || 'Bragging rights + leaderboard points',
         languages: form.languages,
         problems: problems.filter((p) => p.title.trim()),
@@ -320,50 +318,6 @@ export default function CreateContest() {
               onChange={update('endDateTime')}
               className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft"
             />
-          </div>
-        </div>
-
-        <div>
-          <label className="text-xs font-semibold text-ink-soft block mb-1.5">Price, if required</label>
-          <div className="flex gap-4 items-center">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                checked={form.entryFeeType === 'free'}
-                onChange={() =>
-                  setForm((f) => ({
-                    ...f,
-                    entryFeeType: 'free',
-                  }))
-                }
-                className="accent-accent"
-              />{' '}
-              Free
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                checked={form.entryFeeType === 'points'}
-                onChange={() =>
-                  setForm((f) => ({
-                    ...f,
-                    entryFeeType: 'points',
-                  }))
-                }
-                className="accent-accent"
-              />{' '}
-              Paid entry
-            </label>
-            {form.entryFeeType === 'points' && (
-              <input
-                type="number"
-                min={0}
-                value={form.entryFeePoints}
-                onChange={update('entryFeePoints')}
-                className="w-28 px-3 py-2 rounded-xl border border-border text-sm"
-                placeholder="pts"
-              />
-            )}
           </div>
         </div>
 

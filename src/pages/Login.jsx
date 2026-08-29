@@ -2,7 +2,9 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { loginUserRemoteFirst } from '../utils/auth.js'
+import { API_BASE } from '../utils/api.js'
 import { setUser } from '../store/authSlice.js'
+
 export default function Login() {
   const [remember, setRemember] = useState(false)
   const [email, setEmail] = useState('')
@@ -24,6 +26,10 @@ export default function Login() {
     // console.log(result)
     dispatch(setUser(result.user))
     navigate('/')
+  }
+  const handleGoogleLogin = () => {
+   
+    window.location.href = `${API_BASE}/users/google/login`
   }
   return (
     <div className="min-h-[calc(100vh-64px)] grid md:grid-cols-2">
@@ -48,6 +54,7 @@ export default function Login() {
           <div className="flex gap-3 mb-6">
             <button
               type="button"
+              onClick={handleGoogleLogin}
               className="flex-1 py-2.5 rounded-2xl border border-border text-sm font-medium hover:bg-bg-soft flex items-center justify-center gap-2"
             >
               <span>🔵</span> Google

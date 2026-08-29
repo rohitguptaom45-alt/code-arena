@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { plans } from '../data/mockData.js'
 import { submitPayment, getUserPayments, redeemPointsForDiscount, POINTS_PER_RUPEE } from '../utils/appData.js'
+import { setUser, updateUser } from '../store/authSlice.js'
 
 const SERVER = 'http://localhost:8000'
 
@@ -50,7 +51,6 @@ function loadRazorpayScript() {
   return razorpayScriptPromise
 }
 
-// Plan ke "period" text (e.g. "/mo", "/month", "/yr", "/year") ke hisaab se expiry nikalta hai
 function computeExpiryDate(plan) {
   const period = (plan.period || '').toLowerCase()
   const isYearly = period.includes('yr') || period.includes('year')
@@ -64,8 +64,6 @@ export default function Subscription() {
   const user = useSelector((s) => s.auth.user)
   const [activePlan, setActivePlan] = useState(null)
   const [payments, setPayments] = useState(user ? getUserPayments(user.username) : [])
-  // Payment verify hote hi turant UI update dikhane ke liye optimistic local override.
-  // Jab tak actual user.subscription (redux/refetch se) update na ho jaaye, ye use hoga.
   const [localSubscription, setLocalSubscription] = useState(null)
 
   const refreshPayments = () => {
@@ -74,11 +72,12 @@ export default function Subscription() {
 
   const activeSubscription = localSubscription || user?.subscription
 
-  const handlePaymentSuccess = (plan) => {
+  const handlePaymentSuccess = (verifyData, plan) => {
+    const serverSub = verifyData?.data?.subscription || verifyData?.subscription
     setLocalSubscription({
-      active: true,
-      plan: plan.name,
-      expiresAt: computeExpiryDate(plan).toISOString(),
+      active: serverSub?.active ?? true,
+      plan: serverSub?.plan ?? plan.name,
+      expiresAt: serverSub?.expiresAt ?? computeExpiryDate(plan).toISOString(),
     })
   }
 
@@ -205,10 +204,12 @@ export default function Subscription() {
 }
 
 function PaymentModal({ plan, user, onClose, onSuccess }) {
+  const dispatch = useDispatch()
   const [redeemPoints, setRedeemPoints] = useState(0)
   const [stage, setStage] = useState('review')
   const [errorMsg, setErrorMsg] = useState('')
   const [paymentRef, setPaymentRef] = useState(null)
+  const [confirmedSubscription, setConfirmedSubscription] = useState(null)
 
   const baseAmount = useMemo(() => planAmount(plan), [plan])
   const maxRedeemable = useMemo(
@@ -217,20 +218,17 @@ function PaymentModal({ plan, user, onClose, onSuccess }) {
   )
   const discountRupees = useMemo(() => Math.floor(redeemPoints / POINTS_PER_RUPEE), [redeemPoints])
   const finalAmount = useMemo(() => Math.max(1, baseAmount - discountRupees), [baseAmount, discountRupees])
-  const expiryDate = useMemo(() => computeExpiryDate(plan), [plan])
 
   const handlePay = async () => {
     setErrorMsg('')
     setStage('processing')
 
     try {
-      // 1. Load Razorpay script
       const scriptLoaded = await loadRazorpayScript()
       if (!scriptLoaded) {
         throw new Error('Could not load Razorpay checkout script.')
       }
 
-      // 2. Get Razorpay Key
       const keyRes = await fetch(RAZORPAY_KEY_ENDPOINT, {
         method: 'GET',
         credentials: 'include',
@@ -242,7 +240,6 @@ function PaymentModal({ plan, user, onClose, onSuccess }) {
         throw new Error('Server did not return a Razorpay key.')
       }
 
-      // 3. Create Razorpay Order
       const orderRes = await fetch(RAZORPAY_CHECKOUT_ENDPOINT, {
         method: 'POST',
         credentials: 'include',
@@ -255,21 +252,18 @@ function PaymentModal({ plan, user, onClose, onSuccess }) {
         }),
       })
       const orderData = await safeJson(orderRes, 'Creating order')
-      console.log('Order Response:', orderData)
 
       const order = orderData?.data
       if (!order?.id) {
         throw new Error('Server did not return Razorpay order id.')
       }
 
-      // 4. Razorpay Options
       const options = {
         key: razorpayKey,
         amount: order.amount,
         currency: order.currency || 'INR',
         name: 'CodeArena',
         description: `${plan.name} subscription`,
-        // Backend returns id, not order_id
         order_id: order.id,
         prefill: {
           name: user.name || user.username || '',
@@ -283,8 +277,6 @@ function PaymentModal({ plan, user, onClose, onSuccess }) {
         theme: {
           color: '#5B5BF0',
         },
-
-        // 5. Payment Success
         handler: async function (response) {
           try {
             setStage('processing')
@@ -301,22 +293,32 @@ function PaymentModal({ plan, user, onClose, onSuccess }) {
             })
 
             const verifyData = await safeJson(verifyRes, 'Verifying payment')
-            console.log('Payment Verification Response:', verifyData)
 
-            // 6. Turant plan active dikhane ke liye parent ko batao
+            const payload = verifyData?.data || verifyData || {}
+            const serverSub = payload.subscription
+            const serverUser = payload.user
+
+            setConfirmedSubscription({
+              plan: serverSub?.plan ?? plan.name,
+              expiresAt: serverSub?.expiresAt ?? computeExpiryDate(plan).toISOString(),
+            })
             setPaymentRef(response.razorpay_payment_id)
-            onSuccess?.(plan)
 
-            // 7. Payment successful
+            if (serverUser) {
+              dispatch(setUser(serverUser))
+            } else if (serverSub) {
+              dispatch(updateUser({ subscription: serverSub }))
+            }
+
+            onSuccess?.(verifyData, plan)
+
             setStage('done')
           } catch (error) {
-            console.error('Payment verification error:', error)
+            console.error('Payment verification error:', error?.message || error)
             setErrorMsg(error?.message || 'Payment verification failed.')
             setStage('error')
           }
         },
-
-        // User closes payment popup
         modal: {
           ondismiss: function () {
             setStage('review')
@@ -324,20 +326,17 @@ function PaymentModal({ plan, user, onClose, onSuccess }) {
         },
       }
 
-      // 8. Create Razorpay instance
       const rzp = new window.Razorpay(options)
 
-      // 9. Payment Failed
       rzp.on('payment.failed', function (response) {
-        console.error('Razorpay Payment Failed:', response)
+        console.error('Razorpay payment failed:', response?.error?.description)
         setErrorMsg(response?.error?.description || 'Payment failed. Please try again.')
         setStage('error')
       })
 
-      // 10. Open Razorpay popup
       rzp.open()
     } catch (err) {
-      console.error('Handle Pay Error:', err)
+      console.error('Handle pay error:', err?.message || err)
       setErrorMsg(err?.message || 'Something went wrong. Please try again.')
       setStage('error')
     }
@@ -437,10 +436,14 @@ function PaymentModal({ plan, user, onClose, onSuccess }) {
               Payment ref <strong>{paymentRef}</strong> was recorded.
             </p>
             <p className="text-sm font-semibold text-success mb-1">
-              Your {plan.name} plan is active now!
+              Your {confirmedSubscription?.plan || plan.name} plan is active now!
             </p>
             <p className="text-xs text-ink-soft mb-6">
-              It will renew on {expiryDate.toLocaleDateString('en-IN')}. Track its status below on this page.
+              It will renew on{' '}
+              {confirmedSubscription?.expiresAt
+                ? new Date(confirmedSubscription.expiresAt).toLocaleDateString('en-IN')
+                : '—'}
+              . Track its status below on this page.
             </p>
             <button
               onClick={onClose}

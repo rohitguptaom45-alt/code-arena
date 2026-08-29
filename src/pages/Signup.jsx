@@ -4,6 +4,7 @@ import { useDispatch } from 'react-redux'
 import { registerUserRemoteFirst, getAvatarOptions, getAvatarEmoji } from '../utils/auth.js'
 import { applySignupReferral, addNotification } from '../utils/appData.js'
 import { setUser } from '../store/authSlice.js'
+import { API_BASE } from '../utils/api.js'
 const accountTypes = ['Student', 'Professional', 'Freelancer', 'Recruiter']
 function passwordStrength(pw) {
   if (!pw)
@@ -71,6 +72,12 @@ export default function Signup() {
       ...f,
       [field]: e.target.value,
     }))
+  const handleGoogleLogin = () => {
+    // Full page redirect (not a fetch) — OAuth needs the browser to leave
+    // the SPA, hit Google, and come back to the backend's callback route,
+    // which then redirects to '/' with httpOnly cookies already set.
+    window.location.href = `${API_BASE}/users/google/login`
+  }
   const handleContinue = (e) => {
     e.preventDefault()
     setError('')
@@ -150,9 +157,10 @@ export default function Signup() {
           <div className="flex gap-3 mb-6">
             <button
               type="button"
-              className="flex-1 py-2.5 rounded-2xl border border-border text-sm font-medium hover:bg-bg-soft"
+              onClick={handleGoogleLogin}
+              className="flex-1 py-2.5 rounded-2xl border border-border text-sm font-medium hover:bg-bg-soft flex items-center justify-center gap-2"
             >
-              🔵 Google
+              <span>🔵</span> Google
             </button>
             <button
               type="button"
@@ -347,11 +355,11 @@ export default function Signup() {
               className="accent-accent mt-0.5"
             />
             I agree to the{' '}
-            <Link to="/more" className="text-accent hover:underline">
+            <Link to="/legal?tab=terms" className="text-accent hover:underline">
               Terms & Conditions
             </Link>{' '}
             and{' '}
-            <Link to="/more" className="text-accent hover:underline">
+            <Link to="/legal?tab=privacy" className="text-accent hover:underline">
               Privacy Policy
             </Link>
             .

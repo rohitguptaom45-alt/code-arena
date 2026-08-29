@@ -23,6 +23,7 @@ import More from './pages/More.jsx'
 import Settings from './pages/Settings.jsx'
 import Developers from './pages/Developers.jsx'
 import NotFound from './pages/NotFound.jsx'
+import Legal from './pages/Legal'
 import { getStoredTheme, applyTheme } from './utils/theme.js'
 import { getAccessToken } from './utils/api.js'
 import { fetchCurrentUserRemote } from './utils/auth.js'
@@ -37,7 +38,7 @@ export default function App() {
     applyTheme(darkMode ? 'dark' : 'light')
   }, [darkMode])
   useEffect(() => {
-    if (!getAccessToken()) return
+    // if (!getAccessToken()) return    aab syd ho jayega 
     fetchCurrentUserRemote().then((user) => {
       if (user) dispatch(setUser(user))
     })
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/legal" element={<Legal />} />
           <Route path="/more" element={<More />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/developers" element={<Developers />} />
