@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import ContestCard from '../components/ContestCard.jsx'
 import LoginRequiredModal from '../components/LoginRequiredModal.jsx'
-import StatCounter from '../components/StatCounter.jsx'
 import { contests, categories, techLogos } from '../data/mockData.js'
 export default function Home() {
   const [modalOpen, setModalOpen] = useState(false)
@@ -75,20 +74,6 @@ export default function Home() {
           ))}
         </div>
         <style>{`@keyframes scroll { from { transform: translateX(0);} to { transform: translateX(-50%);} }`}</style>
-      </section>
-
-      <section className="max-w-7xl mx-auto px-5 py-20 grid grid-cols-2 md:grid-cols-5 gap-8">
-        <StatCounter target={1000000} suffix="+" label="Developers" duration={1200} />
-        <StatCounter target={50000} suffix="+" label="Coding Contests" />
-        <StatCounter target={10000000} suffix="+" label="Problems Solved" />
-        <div className="text-center">
-          <div className="font-display font-extrabold text-3xl md:text-4xl text-accent">₹5 Cr+</div>
-          <div className="text-sm text-ink-soft mt-1">Prize Pool Distributed</div>
-        </div>
-        <div className="text-center">
-          <div className="font-display font-extrabold text-3xl md:text-4xl text-ink">99.9%</div>
-          <div className="text-sm text-ink-soft mt-1">Platform Uptime</div>
-        </div>
       </section>
 
       <section className="max-w-7xl mx-auto px-5 py-16">

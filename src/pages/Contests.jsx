@@ -19,7 +19,8 @@ export default function Contests() {
   const allContests = useMemo(() => {
     const local = getAllContests(mockContests)
     const remoteIds = new Set(remoteContests.map((c) => c.id))
-    return [...remoteContests, ...local.filter((c) => !remoteIds.has(c.id))]
+    const combined = [...remoteContests, ...local.filter((c) => !remoteIds.has(c.id))]
+    return combined.map((c) => ({ ...c, entryFee: 'Free', isFree: true }))
   }, [remoteContests])
   const filtered = useMemo(() => {
     return allContests.filter((c) => {
