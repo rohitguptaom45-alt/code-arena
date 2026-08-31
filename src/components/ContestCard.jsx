@@ -35,14 +35,12 @@ export default function ContestCard({ contest, onRegister }) {
           </span>
         </div>
         <div className="flex items-center justify-between text-sm pt-1">
-          <div>
+          {/* <div>
             <div className="text-ink-soft text-xs">Prize Pool</div>
             <div className="font-display font-bold text-accent">{contest.prizePool}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-ink-soft text-xs">Entry Fee</div>
-            <div className="font-semibold text-ink">{contest.entryFee}</div>
-          </div>
+          </div> */}
+          {/* 
+           */}
         </div>
         <div className="bg-bg-soft rounded-xl px-3 py-2 flex items-center justify-between text-sm">
           <span className="text-ink-soft">Starts in</span>
