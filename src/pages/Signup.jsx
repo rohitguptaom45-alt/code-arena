@@ -77,7 +77,7 @@ export default function Signup() {
     // the SPA, hit Google, and come back to the backend's callback route,
     // which then redirects to '/' with httpOnly cookies already set.
     window.location.href = `${API_BASE}/users/google/login`
-  }
+     }
   const handleContinue = (e) => {
     e.preventDefault()
     setError('')
