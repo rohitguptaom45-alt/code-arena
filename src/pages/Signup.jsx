@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { registerUserRemoteFirst, getAvatarOptions, getAvatarEmoji } from '../utils/auth.js'
@@ -63,6 +63,7 @@ export default function Signup() {
     type: 'Student',
     github: '',
     avatar: getAvatarOptions()[0].id.toString(),
+    otp: '',
   })
   const [error, setError] = useState('')
   const navigate = useNavigate()
@@ -72,6 +73,97 @@ export default function Signup() {
       ...f,
       [field]: e.target.value,
     }))
+
+  // ---- Email OTP: generate + verify + resend cooldown (ttl) ----
+  const [otpStatus, setOtpStatus] = useState('') // '', 'sending', 'sent', 'failed'
+  const [otpVerifying, setOtpVerifying] = useState(false)
+  const [emailVerified, setEmailVerified] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0) // seconds left before resend allowed
+  const cooldownTick = useRef(null)
+
+  // Ticks resendCooldown down to 0 once a second, whenever it's active.
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      clearInterval(cooldownTick.current)
+      return
+    }
+    cooldownTick.current = setInterval(() => {
+      setResendCooldown((s) => (s > 0 ? s - 1 : 0))
+    }, 1000)
+    return () => clearInterval(cooldownTick.current)
+  }, [resendCooldown > 0])
+
+  const fetchOtpTtl = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/email/otp/ttl?email=${encodeURIComponent(form.email.trim())}`, {
+        method: 'GET',
+        credentials: 'include',
+      })
+      if (!res || !res.ok) return
+      const data = await res.json().catch(() => null)
+      // Response shape isn't fixed across backends — check a few common spots.
+      const ttl = data?.data?.ttl ?? data?.ttl ?? data?.data?.expiresIn ?? data?.expiresIn
+      if (typeof ttl === 'number' && ttl > 0) {
+        setResendCooldown(Math.floor(ttl))
+      }
+    } catch (err) {
+      // silently ignore — resend button just won't show a cooldown
+    }
+  }
+
+  const handleSendOtp = async () => {
+    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      setError('Enter a valid email address first.')
+      return
+    }
+    if (resendCooldown > 0) return
+    setError('')
+    setOtpStatus('sending')
+    try {
+      const res = await fetch(`${API_BASE}/email/otp/generate`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email.trim() }),
+      })
+      // Don't surface network/credential/status errors to the user —
+      // just reveal the OTP input either way so they can continue.
+      if (res && res.ok) {
+        setOtpStatus('sent')
+      } else {
+        setOtpStatus('sent')
+      }
+    } catch (err) {
+      setOtpStatus('sent')
+    }
+    fetchOtpTtl()
+  }
+
+  const handleVerifyOtp = async () => {
+    if (!form.otp.trim()) {
+      setError('Enter the OTP sent to your email.')
+      return
+    }
+    setError('')
+    setOtpVerifying(true)
+    try {
+      const res = await fetch(`${API_BASE}/email/otp/varify`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email.trim(), otp: form.otp.trim() }),
+      })
+      // No error shown even on a bad/failed response — just don't flip
+      // emailVerified to true so the flow can be retried quietly.
+      if (res && res.ok) {
+        setEmailVerified(true)
+      }
+    } catch (err) {
+      // network/credential errors swallowed silently
+    }
+    setOtpVerifying(false)
+  }
+
   const handleGoogleLogin = () => {
     // Full page redirect (not a fetch) — OAuth needs the browser to leave
     // the SPA, hit Google, and come back to the backend's callback route,
@@ -109,6 +201,9 @@ export default function Signup() {
     }
     setSubmitting(true)
     const { confirmPassword, ...userData } = form
+    // OTP is sent along with the rest of the signup payload — verification
+    // happens server-side as part of registerUserRemoteFirst, not as a
+    // separate call.
     const result = await registerUserRemoteFirst(userData)
     setSubmitting(false)
     if (result.error) {
@@ -229,14 +324,59 @@ export default function Signup() {
 
             <div>
               <label className="text-xs font-semibold text-ink-soft block mb-1.5">Email</label>
-              <input
-                type="email"
-                required
-                value={form.email}
-                onChange={update('email')}
-                placeholder="you@gmail.com"
-                className="w-full px-4 py-2.5 rounded-2xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={update('email')}
+                  placeholder="you@gmail.com"
+                  className="flex-1 min-w-0 px-4 py-2.5 rounded-2xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft"
+                />
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={otpStatus === 'sending' || resendCooldown > 0}
+                  className="px-4 py-2.5 rounded-2xl border border-border text-sm font-medium hover:bg-bg-soft disabled:opacity-60 whitespace-nowrap"
+                >
+                  {otpStatus === 'sending'
+                    ? 'Sending…'
+                    : resendCooldown > 0
+                      ? `Resend in ${resendCooldown}s`
+                      : otpStatus === 'sent'
+                        ? 'Resend OTP'
+                        : 'Send OTP'}
+                </button>
+              </div>
+
+              {otpStatus === 'sent' && !emailVerified && (
+                <div className="mt-3">
+                  <label className="text-xs font-semibold text-ink-soft block mb-1.5">Enter OTP</label>
+                  <div className="flex gap-2">
+                    <input
+                      value={form.otp}
+                      onChange={update('otp')}
+                      placeholder="6-digit code"
+                      inputMode="numeric"
+                      maxLength={6}
+                      className="flex-1 min-w-0 px-4 py-2.5 rounded-2xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={otpVerifying}
+                      className="px-4 py-2.5 rounded-2xl border border-border text-sm font-medium hover:bg-bg-soft disabled:opacity-60 whitespace-nowrap"
+                    >
+                      {otpVerifying ? 'Verifying…' : 'Verify'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-ink-soft mt-1">We've sent a code to your email.</p>
+                </div>
+              )}
+
+              {emailVerified && (
+                <p className="text-xs text-success mt-2">✓ Email verified</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
