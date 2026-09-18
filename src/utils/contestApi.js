@@ -25,6 +25,8 @@ function durationLabel(startingFrom, endingAt) {
 }
 export function normalizeRemoteContest(c) {
   const startsInSeconds = Math.max(0, Math.round((new Date(c.startingFrom).getTime() - Date.now()) / 1000))
+  const resolvedOwnerId = c.ownerId || c.owner?.id
+  const resolvedOwnerName = c.owner?.username || c.createdBy || c.ownerId
   return {
     id: c.id,
     remote: true,
@@ -42,14 +44,40 @@ export function normalizeRemoteContest(c) {
     participants: c._count?.participants ?? c.participants?.length ?? 0,
     languages: c.languages && c.languages.length ? c.languages : ['Any'],
     banner: bannerFor(c.id),
-    createdBy: c.owner?.username || c.ownerId,
-    ownerId: c.ownerId,
+    createdBy: resolvedOwnerName,
+    ownerId: resolvedOwnerId,
+    owner: c.owner,
     ownerAvatar: c.owner?.avatar,
     visibility: c.visibility,
-    isProtected: c.isProtected,
-    isCancelled: c.isCancelled,
+    isProtected: Boolean(c.isProtected),
+    isCancelled: Boolean(c.isCancelled),
     status: c.status,
     createdAt: c.createdAt,
+    _count: {
+      ...c._count,
+      likes: c._count?.likes ?? c._count?.like ?? 0,
+      like: c._count?.likes ?? c._count?.like ?? 0,
+    },
+    likesCount: c._count?.likes ?? c._count?.like ?? 0,
+    isLikedByMe: Boolean(c.isLikedByMe),
+  }
+}
+export async function fetchContestByIdRemote(contestId) {
+  try {
+    const res = await contestApi.getById(contestId)
+    if (res?.data) {
+      return {
+        contest: normalizeRemoteContest(res.data),
+        source: 'remote',
+      }
+    }
+    return {
+      error: 'Contest not found',
+    }
+  } catch (err) {
+    return {
+      error: err.message || "Couldn't fetch contest details.",
+    }
   }
 }
 export async function fetchContestsRemoteFirst(page = 1) {
@@ -83,9 +111,9 @@ export async function createContestRemoteFirst(payload) {
     }
   }
 }
-export async function joinContestRemoteFirst(contestId) {
+export async function joinContestRemoteFirst(contestId, password) {
   try {
-    await contestApi.join(contestId)
+    await contestApi.join(contestId, password)
     return {
       success: true,
     }

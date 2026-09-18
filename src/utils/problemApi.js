@@ -25,6 +25,18 @@ export async function updateProblemRemote(contestId, problemId, payload) {
     }
   }
 }
+export async function deleteProblemRemote(contestId, problemId) {
+  try {
+    await problemApi.delete(contestId, problemId)
+    return {
+      success: true,
+    }
+  } catch (err) {
+    return {
+      error: err.message || "Couldn't delete the problem.",
+    }
+  }
+}
 export async function addProblemLanguagesRemote(contestId, problemId, languageIds) {
   try {
     const res = await problemApi.addLanguages(contestId, problemId, languageIds)

@@ -8,8 +8,11 @@ import {
   createDiscussionRemote,
   deleteDiscussionRemote,
   toggleDiscussionLikeRemote,
+  toggleNestedCommentLikeRemote,
   fetchDiscussionRepliesRemote,
   replyToDiscussionRemote,
+  replyToReplyRemote,
+  fetchReplyOfReplyRemote,
 } from '../utils/socialApi.js'
 function timeAgo(iso) {
   const diffSec = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 1000))
@@ -30,8 +33,9 @@ function normalizeDiscussion(d) {
     text: d.content,
     at: d.createdAt,
     isEdited: d.isEdited,
-    likeCount: d._count?.like ?? 0,
-    replyCount: d._count?.replies ?? 0,
+    likeCount: d.likesCount ?? d._count?.like ?? 0,
+    replyCount: d.repliesCount ?? d._count?.replies ?? 0,
+    isLikedByMe: Boolean(d.isLikedByMe),
   }
 }
 function PostComposer({ user, onPosted }) {
@@ -99,6 +103,97 @@ function PostComposer({ user, onPosted }) {
     </div>
   )
 }
+function DiscussionReplyItem({ reply, user, depth = 0 }) {
+  const [liked, setLiked] = useState(Boolean(reply.isLikedByMe))
+  const [likeCount, setLikeCount] = useState(reply.likesCount ?? 0)
+  const [showChildren, setShowChildren] = useState(false)
+  const [children, setChildren] = useState(null)
+  const [replyText, setReplyText] = useState('')
+  const [posting, setPosting] = useState(false)
+  const [showReplyBox, setShowReplyBox] = useState(false)
+
+  const loadChildren = () => {
+    fetchReplyOfReplyRemote(reply.id).then((res) => setChildren(res.replies || []))
+  }
+  const handleToggleChildren = () => {
+    if (!showChildren && children === null) loadChildren()
+    setShowChildren((v) => !v)
+  }
+  const handleLike = async () => {
+    if (!user) return
+    const res = await toggleNestedCommentLikeRemote(reply.id)
+    if (!res.error) {
+      setLiked(res.isLiked)
+      setLikeCount(typeof res.count === 'number' ? res.count : likeCount + (res.isLiked ? 1 : -1))
+    }
+  }
+  const handleReply = async () => {
+    if (!user || !replyText.trim()) return
+    setPosting(true)
+    const res = await replyToReplyRemote(reply.id, replyText.trim())
+    setPosting(false)
+    if (!res.error) {
+      setReplyText('')
+      setShowReplyBox(false)
+      if (showChildren) loadChildren()
+      else { setShowChildren(true); loadChildren() }
+    }
+  }
+  return (
+    <div className="flex gap-2 text-sm">
+      <span className="w-6 h-6 rounded-full bg-muted grid place-items-center text-xs shrink-0">
+        {getAvatarEmoji(reply.owner?.avatar)}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div>
+          <span className="font-semibold text-ink mr-1.5">@{reply.owner?.username}</span>
+          <span className="text-ink-soft">{reply.content}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-0.5 text-xs text-ink-soft">
+          <button onClick={handleLike} className={`hover:text-accent ${liked ? 'text-danger' : ''}`}>
+            {liked ? '❤️' : '🤍'} {likeCount}
+          </button>
+          {user && (
+            <button onClick={() => setShowReplyBox((v) => !v)} className="hover:text-accent">
+              Reply
+            </button>
+          )}
+          {(reply.childrenCount > 0 || (children && children.length > 0)) && (
+            <button onClick={handleToggleChildren} className="hover:text-accent">
+              {showChildren ? 'Hide' : `${reply.childrenCount ?? '+'} more`}
+            </button>
+          )}
+        </div>
+        {showReplyBox && (
+          <div className="flex gap-2 mt-1">
+            <input
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleReply() }}
+              placeholder={`Reply to @${reply.owner?.username}…`}
+              className="flex-1 px-3 py-1 rounded-xl border border-border text-xs focus:outline-none focus:ring-2 focus:ring-accent-soft"
+            />
+            <button
+              onClick={handleReply}
+              disabled={posting || !replyText.trim()}
+              className="px-3 py-1 rounded-xl bg-bg-soft text-xs font-semibold text-ink hover:bg-muted disabled:opacity-60"
+            >
+              {posting ? '…' : 'Send'}
+            </button>
+          </div>
+        )}
+        {showChildren && depth < 4 && (
+          <div className="mt-2 pl-3 border-l border-border space-y-2">
+            {children === null && <p className="text-xs text-ink-soft/70">Loading…</p>}
+            {children?.map((c) => (
+              <DiscussionReplyItem key={c.id} reply={c} user={user} depth={depth + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 function RepliesViewer({ discussionId, user }) {
   const [replies, setReplies] = useState(null)
   const [text, setText] = useState('')
@@ -124,13 +219,7 @@ function RepliesViewer({ discussionId, user }) {
       {replies === null && <p className="text-xs text-ink-soft/70">Loading replies…</p>}
       {replies !== null && replies.length === 0 && <p className="text-xs text-ink-soft/70">No replies yet.</p>}
       {replies?.map((r) => (
-        <div key={r.id} className="flex gap-2 text-sm">
-          <span className="w-6 h-6 rounded-full bg-muted grid place-items-center text-xs shrink-0">{getAvatarEmoji(r.owner?.avatar)}</span>
-          <div>
-            <span className="font-semibold text-ink mr-1.5">@{r.owner?.username}</span>
-            <span className="text-ink-soft">{r.content}</span>
-          </div>
-        </div>
+        <DiscussionReplyItem key={r.id} reply={r} user={user} />
       ))}
       {user && (
         <div className="flex gap-2 pt-1">
@@ -158,15 +247,15 @@ function RepliesViewer({ discussionId, user }) {
 function PostCard({ post, user, onChange }) {
   const [commentText, setCommentText] = useState('')
   const [showComments, setShowComments] = useState(false)
-  const [liked, setLiked] = useState(post.remote ? false : (post.likes || []).includes(user?.username?.toLowerCase()))
-  const [likeCount, setLikeCount] = useState(post.remote ? post.likeCount : (post.likes || []).length)
+  const [liked, setLiked] = useState(post.remote ? Boolean(post.isLikedByMe) : (post.likes || []).includes(user?.username?.toLowerCase()))
+  const [likeCount, setLikeCount] = useState(post.remote ? (post.likeCount ?? 0) : (post.likes || []).length)
   const handleLike = async () => {
     if (!user) return
     if (post.remote) {
       const res = await toggleDiscussionLikeRemote(post.id)
       if (!res.error) {
         setLiked(res.isLiked)
-        setLikeCount((c) => c + (res.isLiked ? 1 : -1))
+        setLikeCount(typeof res.count === 'number' ? res.count : Math.max(0, likeCount + (res.isLiked ? 1 : -1)))
       }
       return
     }

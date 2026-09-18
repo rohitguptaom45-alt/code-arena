@@ -3,14 +3,52 @@ import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { createContest } from '../utils/appData.js'
 import { createContestRemoteFirst } from '../utils/contestApi.js'
-import { createProblemRemote, addProblemTestCasesRemote, addProblemLanguagesRemote } from '../utils/problemApi.js'
+import {
+  createProblemRemote,
+  addProblemTestCasesRemote,
+  addProblemLanguagesRemote,
+  addPreloadedCodeRemote,
+} from '../utils/problemApi.js'
 const types = ['Debugging Challenge', 'DSA Battle', 'Frontend / React', 'SQL Clash', 'Java Championship', 'Custom']
 const difficulties = ['Easy', 'Medium', 'Hard']
 const allLanguages = ['JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'SQL']
 const PROBLEM_LANGUAGE_IDS = {
   JavaScript: 'javascript',
+  Python: 'python',
   Java: 'java',
   'C++': 'cpp',
+}
+const DEFAULT_BOILERPLATES = {
+  JavaScript: `// JavaScript Starter Template
+function solution(input) {
+  // Write your code here
+  return input;
+}
+`,
+  Python: `# Python Starter Template
+def solution(input_data):
+    # Write your code here
+    pass
+`,
+  Java: `// Java Starter Template
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        // Write your code here
+    }
+}
+`,
+  'C++': `// C++ Starter Template
+#include <iostream>
+using namespace std;
+
+int main() {
+    // Write your code here
+    return 0;
+}
+`,
 }
 const banners = [
   {
@@ -34,9 +72,12 @@ function emptyProblem() {
   return {
     title: '',
     statement: '',
-    sampleInput: '',
-    sampleOutput: '',
+    difficulty: 'Medium',
     constraints: '',
+    testCases: [
+      { input: '', output: '' },
+    ],
+    codeTemplates: {},
   }
 }
 export default function CreateContest() {
@@ -99,6 +140,64 @@ export default function CreateContest() {
   }
   const addProblem = () => setProblems((ps) => [...ps, emptyProblem()])
   const removeProblem = (idx) => setProblems((ps) => ps.filter((_, i) => i !== idx))
+
+  const addTestCase = (problemIdx) => {
+    setProblems((ps) =>
+      ps.map((p, i) =>
+        i === problemIdx
+          ? { ...p, testCases: [...(p.testCases || []), { input: '', output: '' }] }
+          : p
+      )
+    )
+  }
+
+  const removeTestCase = (problemIdx, tcIdx) => {
+    setProblems((ps) =>
+      ps.map((p, i) =>
+        i === problemIdx
+          ? { ...p, testCases: (p.testCases || []).filter((_, ti) => ti !== tcIdx) }
+          : p
+      )
+    )
+  }
+
+  const updateTestCase = (problemIdx, tcIdx, field, value) => {
+    setProblems((ps) =>
+      ps.map((p, i) =>
+        i === problemIdx
+          ? {
+              ...p,
+              testCases: (p.testCases || []).map((tc, ti) =>
+                ti === tcIdx ? { ...tc, [field]: value } : tc
+              ),
+            }
+          : p
+      )
+    )
+  }
+
+  const [activeTemplateTabs, setActiveTemplateTabs] = useState({})
+
+  const updateCodeTemplate = (problemIdx, langName, code) => {
+    setProblems((ps) =>
+      ps.map((p, i) =>
+        i === problemIdx
+          ? {
+              ...p,
+              codeTemplates: {
+                ...(p.codeTemplates || {}),
+                [langName]: code,
+              },
+            }
+          : p
+      )
+    )
+  }
+
+  const setTemplateTab = (problemIdx, langName) => {
+    setActiveTemplateTabs((prev) => ({ ...prev, [problemIdx]: langName }))
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -122,34 +221,42 @@ export default function CreateContest() {
       endingAt: endTime.toISOString(),
       totalPoints: Number(form.totalPoints) || 0,
       isProtected: form.isProtected,
-      password: form.isProtected ? form.password : undefined,
+      password: form.isProtected ? form.password.trim() : undefined,
       languages: form.languages,
     })
     setSubmitting(false)
     if (remoteResult.contest) {
       const languageIds = form.languages.map((l) => PROBLEM_LANGUAGE_IDS[l]).filter(Boolean)
       for (const p of problems.filter((p) => p.title.trim() && p.statement.trim())) {
+        const constraintsArr = (p.constraints || '')
+          .split('\n')
+          .map((c) => c.trim())
+          .filter(Boolean)
         const created = await createProblemRemote(remoteResult.contest.id, {
           title: p.title.trim(),
           statement: p.statement.trim(),
-          difficulty: form.difficulty.toLowerCase(),
+          difficulty: (p.difficulty || form.difficulty).toLowerCase(),
           tags: [],
-          constraints: p.constraints
-            .split('\n')
-            .map((c) => c.trim())
-            .filter(Boolean),
+          constraints: constraintsArr.length ? constraintsArr : ['1 <= n <= 10^5'],
         })
         if (!created.problem) continue
-        if (p.sampleInput.trim() && p.sampleOutput.trim()) {
-          await addProblemTestCasesRemote(remoteResult.contest.id, created.problem.id, [
-            {
-              input: p.sampleInput.trim(),
-              output: p.sampleOutput.trim(),
-            },
-          ])
+        const validTestCases = (p.testCases || [])
+          .map((tc) => ({ input: tc.input.trim(), output: tc.output.trim() }))
+          .filter((tc) => tc.input && tc.output)
+        if (validTestCases.length > 0) {
+          await addProblemTestCasesRemote(remoteResult.contest.id, created.problem.id, validTestCases)
         }
         if (languageIds.length) {
           await addProblemLanguagesRemote(remoteResult.contest.id, created.problem.id, languageIds)
+        }
+        // Save code templates for supported languages
+        if (p.codeTemplates && typeof p.codeTemplates === 'object') {
+          for (const [langName, code] of Object.entries(p.codeTemplates)) {
+            const langId = PROBLEM_LANGUAGE_IDS[langName]
+            if (langId && languageIds.includes(langId) && code && code.trim()) {
+              await addPreloadedCodeRemote(remoteResult.contest.id, created.problem.id, langId, code.trim())
+            }
+          }
         }
       }
       navigate(`/contests/${remoteResult.contest.id}`)
@@ -365,56 +472,247 @@ export default function CreateContest() {
             </button>
           </div>
           <div className="space-y-4">
-            {problems.map((p, idx) => (
-              <div key={idx} className="border border-border rounded-2xl p-4 space-y-2">
+            {problems.map((p, idx) => {
+              const templateLangs = form.languages.filter((l) => PROBLEM_LANGUAGE_IDS[l])
+              const currentActiveLang = activeTemplateTabs[idx] || templateLangs[0] || ''
+              const configuredTemplatesCount = templateLangs.filter((l) => Boolean((p.codeTemplates?.[l] || '').trim())).length
+
+              return (
+              <div key={idx} className="border border-border rounded-2xl p-5 space-y-3 bg-white shadow-soft">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-ink-soft">Problem {idx + 1}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-accent/10 text-accent font-bold text-xs grid place-items-center">
+                      {idx + 1}
+                    </span>
+                    <span className="text-xs font-bold text-ink">Problem #{idx + 1}</span>
+                  </div>
                   {problems.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeProblem(idx)}
-                      className="text-xs text-danger hover:underline"
+                      className="text-xs text-danger hover:underline font-semibold"
                     >
-                      Remove
+                      ✕ Remove Problem
                     </button>
                   )}
                 </div>
-                <input
-                  value={p.title}
-                  onChange={(e) => updateProblem(idx, 'title', e.target.value)}
-                  placeholder="Problem title"
-                  className="w-full px-3 py-2 rounded-xl border border-border text-sm"
-                />
-                <textarea
-                  value={p.statement}
-                  onChange={(e) => updateProblem(idx, 'statement', e.target.value)}
-                  rows={2}
-                  placeholder="Problem statement"
-                  className="w-full px-3 py-2 rounded-xl border border-border text-sm resize-none"
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    value={p.sampleInput}
-                    onChange={(e) => updateProblem(idx, 'sampleInput', e.target.value)}
-                    placeholder="Sample input"
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono"
-                  />
-                  <input
-                    value={p.sampleOutput}
-                    onChange={(e) => updateProblem(idx, 'sampleOutput', e.target.value)}
-                    placeholder="Sample output"
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono"
+
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-semibold text-ink-soft block mb-1">Title</label>
+                    <input
+                      value={p.title}
+                      onChange={(e) => updateProblem(idx, 'title', e.target.value)}
+                      placeholder="e.g. Invert Binary Tree"
+                      className="w-full px-3.5 py-2 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent-soft"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-ink-soft block mb-1">Difficulty</label>
+                    <select
+                      value={p.difficulty || form.difficulty}
+                      onChange={(e) => updateProblem(idx, 'difficulty', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent-soft"
+                    >
+                      <option value="Easy">Easy</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Hard">Hard</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-ink-soft block mb-1">Problem Statement</label>
+                  <textarea
+                    value={p.statement}
+                    onChange={(e) => updateProblem(idx, 'statement', e.target.value)}
+                    rows={3}
+                    placeholder="Describe the problem, input format, and output expectations..."
+                    className="w-full px-3.5 py-2 rounded-xl border border-border text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent-soft"
                   />
                 </div>
-                <textarea
-                  value={p.constraints}
-                  onChange={(e) => updateProblem(idx, 'constraints', e.target.value)}
-                  rows={2}
-                  placeholder={'Constraints, one per line, e.g.\n1 <= n <= 10^5\n-1000 <= arr[i] <= 1000'}
-                  className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono resize-none"
-                />
+
+                <div>
+                  <label className="text-xs font-semibold text-ink-soft block mb-1">Constraints</label>
+                  <textarea
+                    value={p.constraints}
+                    onChange={(e) => updateProblem(idx, 'constraints', e.target.value)}
+                    rows={2}
+                    placeholder={'1 <= n <= 10^5\n-1000 <= arr[i] <= 1000'}
+                    className="w-full px-3.5 py-2 rounded-xl border border-border text-xs font-mono resize-none focus:outline-none focus:ring-2 focus:ring-accent-soft"
+                  />
+                </div>
+
+                {/* Multi-TestCase Section */}
+                <div className="pt-2 border-t border-border/70 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-ink">Test Cases</span>
+                      <span className="text-[11px] text-ink-soft ml-1.5 font-normal">
+                        ({(p.testCases || []).length} case{(p.testCases || []).length === 1 ? '' : 's'})
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => addTestCase(idx)}
+                      className="text-xs font-semibold text-accent hover:underline inline-flex items-center gap-1"
+                    >
+                      + Add Test Case
+                    </button>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {(p.testCases || []).map((tc, tcIdx) => (
+                      <div key={tcIdx} className="border border-border/80 rounded-xl p-3 bg-bg-soft/40 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-ink-soft">Test Case #{tcIdx + 1}</span>
+                          {(p.testCases || []).length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeTestCase(idx, tcIdx)}
+                              className="text-[11px] text-danger hover:underline font-medium"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div>
+                            <label className="text-[10px] font-mono text-ink-soft block mb-1">Input</label>
+                            <textarea
+                              rows={2}
+                              value={tc.input}
+                              onChange={(e) => updateTestCase(idx, tcIdx, 'input', e.target.value)}
+                              placeholder="Input values"
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-border text-xs font-mono resize-none bg-white focus:outline-none focus:ring-1 focus:ring-accent-soft"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-mono text-ink-soft block mb-1">Expected Output</label>
+                            <textarea
+                              rows={2}
+                              value={tc.output}
+                              onChange={(e) => updateTestCase(idx, tcIdx, 'output', e.target.value)}
+                              placeholder="Expected output"
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-border text-xs font-mono resize-none bg-white focus:outline-none focus:ring-1 focus:ring-accent-soft"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Code Templates (Starter Code) Section */}
+                <div className="pt-3 border-t border-border/70 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-ink">Code Templates (Starter Code)</span>
+                      <span className="text-[11px] text-ink-soft ml-1.5 font-normal">
+                        (Pre-loaded code for participants)
+                      </span>
+                    </div>
+                    {configuredTemplatesCount > 0 && (
+                      <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                        {configuredTemplatesCount} template{configuredTemplatesCount > 1 ? 's' : ''} configured
+                      </span>
+                    )}
+                  </div>
+
+                  {templateLangs.length === 0 ? (
+                    <div className="text-xs text-ink-soft bg-bg-soft/40 p-3 rounded-xl border border-border/60">
+                      Select supported languages (JavaScript, Python, Java, C++) in the contest settings above to provide starter code templates.
+                    </div>
+                  ) : (
+                    <div className="bg-bg-soft/30 border border-border/80 rounded-xl p-3 space-y-3">
+                      {/* Language Selection Tabs */}
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                        {templateLangs.map((lang) => {
+                          const hasTemplate = Boolean((p.codeTemplates?.[lang] || '').trim())
+                          const isActive = currentActiveLang === lang
+                          return (
+                            <button
+                              key={lang}
+                              type="button"
+                              onClick={() => setTemplateTab(idx, lang)}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                isActive
+                                  ? 'bg-ink text-white shadow-sm'
+                                  : 'bg-white text-ink-soft hover:text-ink border border-border/80 hover:border-ink/20'
+                              }`}
+                            >
+                              <span>{lang}</span>
+                              {hasTemplate && (
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full ${
+                                    isActive ? 'bg-accent' : 'bg-emerald-500'
+                                  }`}
+                                  title="Template provided"
+                                />
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/* Code Area for currentActiveLang */}
+                      {currentActiveLang && (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-ink-soft">
+                              <strong className="text-ink font-semibold">{currentActiveLang}</strong> starter code:
+                              {(p.codeTemplates?.[currentActiveLang] || '').trim() ? (
+                                <span className="text-emerald-600 ml-1.5 font-medium">● Configured</span>
+                              ) : (
+                                <span className="text-ink-soft/70 ml-1.5 font-normal">(Empty — participant will get generic skeleton)</span>
+                              )}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateCodeTemplate(
+                                    idx,
+                                    currentActiveLang,
+                                    DEFAULT_BOILERPLATES[currentActiveLang] || `// Starter code for ${currentActiveLang}\n`
+                                  )
+                                }
+                                className="text-accent hover:underline font-semibold"
+                              >
+                                Insert boilerplate
+                              </button>
+                              {(p.codeTemplates?.[currentActiveLang] || '').trim() && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateCodeTemplate(idx, currentActiveLang, '')}
+                                  className="text-danger hover:underline font-medium"
+                                >
+                                  Clear
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <textarea
+                            rows={6}
+                            value={p.codeTemplates?.[currentActiveLang] || ''}
+                            onChange={(e) => updateCodeTemplate(idx, currentActiveLang, e.target.value)}
+                            placeholder={`// Starter code for ${currentActiveLang} participants...\n// If left empty, participant will get the platform default skeleton.`}
+                            className="w-full px-3 py-2.5 text-xs font-mono bg-slate-900 text-slate-100 placeholder-slate-500 rounded-xl border border-slate-700 resize-y focus:outline-none focus:ring-2 focus:ring-accent-soft leading-relaxed"
+                            spellCheck={false}
+                          />
+                          <p className="text-[10px] text-ink-soft">
+                            Participants will see this code pre-loaded when they select {currentActiveLang} in the contest editor.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 

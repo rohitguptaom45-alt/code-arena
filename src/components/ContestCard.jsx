@@ -33,14 +33,24 @@ export default function ContestCard({ contest, onRegister }) {
           <span className="px-2.5 py-1 rounded-full bg-muted text-ink-soft font-medium">
             👥 {contest.participants.toLocaleString('en-IN')}
           </span>
+          <span className="px-2.5 py-1 rounded-full bg-muted text-ink-soft font-medium">
+            {contest.isLikedByMe ? '❤️' : '🤍'} {(contest.likesCount ?? contest._count?.likes ?? 0).toLocaleString('en-IN')}
+          </span>
+          {contest.isProtected && (
+            <span className="px-2.5 py-1 rounded-full bg-warning/15 text-warning font-semibold flex items-center gap-1">
+              🔒 Protected
+            </span>
+          )}
         </div>
         <div className="flex items-center justify-between text-sm pt-1">
-          {/* <div>
+          <div>
             <div className="text-ink-soft text-xs">Prize Pool</div>
             <div className="font-display font-bold text-accent">{contest.prizePool}</div>
-          </div> */}
-          {/* 
-           */}
+          </div>
+          <div>
+            <div className="text-ink-soft text-xs text-right">Access</div>
+            <div className="font-semibold text-ink text-xs">{contest.isProtected ? '🔒 Password' : '🌐 Open'}</div>
+          </div>
         </div>
         <div className="bg-bg-soft rounded-xl px-3 py-2 flex items-center justify-between text-sm">
           <span className="text-ink-soft">Starts in</span>
