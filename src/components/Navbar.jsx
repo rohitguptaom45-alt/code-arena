@@ -23,6 +23,10 @@ const navItems = [
     to: '/chat',
   },
   {
+    label: 'Community',
+    to: '/community',
+  },
+  {
     label: 'Subscription',
     to: '/subscription',
   },

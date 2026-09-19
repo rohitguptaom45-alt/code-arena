@@ -114,9 +114,9 @@ export const contestApi = {
       body: payload,
     }),
   getAll: (page = 1) =>
-    request(`/contest/getallcontest?page=${page}`, {
-      auth: false,
-    }),
+    request(`/contest/getallcontest?page=${page}`),
+  getById: (contestId) =>
+    request(`/contest/get/${contestId}`),
   changePassword: (contestId, password) =>
     request(`/contest/changepass/${contestId}`, {
       method: 'PATCH',
@@ -124,9 +124,10 @@ export const contestApi = {
         password,
       },
     }),
-  join: (contestId) =>
+  join: (contestId, password) =>
     request(`/contest/join/${contestId}`, {
       method: 'PATCH',
+      body: password ? { password } : undefined,
     }),
   leave: (contestId) =>
     request(`/contest/leave/${contestId}`, {
@@ -265,6 +266,10 @@ export const problemApi = {
       method: 'PATCH',
       body: payload,
     }),
+  delete: (contestId, problemId) =>
+    request(`/${contestId}/problem/delete/${problemId}`, {
+      method: 'DELETE',
+    }),
   addLanguages: (contestId, problemId, languageIds) =>
     request(`/${contestId}/problem/add/l/${problemId}`, {
       method: 'PATCH',
@@ -308,6 +313,13 @@ export const problemApi = {
       auth: false,
     }),
 }
+
+export const languageApi = {
+  getAll: () =>
+    request('/language', {
+      auth: false,
+    }),
+}
 export const nestApi = {
   replyToComment: (commentId, content) =>
     request(`/nest/comments/${commentId}/replies`, {
@@ -335,7 +347,7 @@ export const nestApi = {
     }),
   getReplyReplies: (replyId, page = 1) =>
     request(`/nest/replies/${replyId}/replies?page=${page}`, {
-      auth: true,
+      auth: false,
     }),
 }
 

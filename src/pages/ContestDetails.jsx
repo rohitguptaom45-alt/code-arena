@@ -10,6 +10,7 @@ import {
 } from '../utils/appData.js'
 import {
   fetchContestsRemoteFirst,
+  fetchContestByIdRemote,
   joinContestRemoteFirst,
   leaveContestRemoteFirst,
   cancelContestRemoteFirst,
@@ -28,8 +29,11 @@ import {
   fetchContestCommentsRemote,
   toggleCommentLikeRemote,
   toggleContestLikeRemote,
+  toggleNestedCommentLikeRemote,
   fetchCommentRepliesRemote,
   replyToCommentRemote,
+  replyToReplyRemote,
+  fetchReplyOfReplyRemote,
 } from '../utils/socialApi.js'
 import { fetchContestProblemsRemote } from '../utils/problemApi.js'
 import {
@@ -48,8 +52,11 @@ import {
 } from '../utils/appData.js'
 import LoginRequiredModal from '../components/LoginRequiredModal.jsx'
 import CommunityFeed from '../components/CommunityFeed.jsx'
+import ContestPasswordModal from '../components/ContestPasswordModal.jsx'
+import EditContestModal from '../components/EditContestModal.jsx'
 function normalizeRemoteComment(c, myUsername) {
-  const likedByMe = false
+  const likedByMe = Boolean(c.isLikedByMe)
+  const likeCount = c.likesCount ?? c._count?.likes ?? 0
   return {
     id: c.id,
     remote: true,
@@ -57,6 +64,9 @@ function normalizeRemoteComment(c, myUsername) {
     avatar: c.owner?.avatar,
     text: c.content,
     at: c.createdAt,
+    likeCount,
+    isLikedByMe: likedByMe,
+    // legacy array used by like toggle handler
     likes: likedByMe && myUsername ? [myUsername.toLowerCase()] : [],
   }
 }
@@ -105,6 +115,97 @@ function capitalize(s) {
   if (!s) return s
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
+function ReplyItem({ reply, user, depth = 0 }) {
+  const [liked, setLiked] = useState(Boolean(reply.isLikedByMe))
+  const [likeCount, setLikeCount] = useState(reply.likesCount ?? 0)
+  const [showChildren, setShowChildren] = useState(false)
+  const [children, setChildren] = useState(null)
+  const [replyText, setReplyText] = useState('')
+  const [posting, setPosting] = useState(false)
+  const [showReplyBox, setShowReplyBox] = useState(false)
+
+  const loadChildren = () => {
+    fetchReplyOfReplyRemote(reply.id).then((res) => setChildren(res.replies || []))
+  }
+  const handleToggleChildren = () => {
+    if (!showChildren && children === null) loadChildren()
+    setShowChildren((v) => !v)
+  }
+  const handleLike = async () => {
+    if (!user) return
+    const res = await toggleNestedCommentLikeRemote(reply.id)
+    if (!res.error) {
+      setLiked(res.isLiked)
+      setLikeCount(typeof res.count === 'number' ? res.count : likeCount + (res.isLiked ? 1 : -1))
+    }
+  }
+  const handleReply = async () => {
+    if (!user || !replyText.trim()) return
+    setPosting(true)
+    const res = await replyToReplyRemote(reply.id, replyText.trim())
+    setPosting(false)
+    if (!res.error) {
+      setReplyText('')
+      setShowReplyBox(false)
+      if (showChildren) loadChildren()
+      else { setShowChildren(true); loadChildren() }
+    }
+  }
+  return (
+    <div className="flex gap-2 text-sm">
+      <span className="w-6 h-6 rounded-full bg-muted grid place-items-center text-xs shrink-0">
+        {getAvatarEmoji(reply.owner?.avatar)}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div>
+          <span className="font-semibold text-ink mr-1.5">@{reply.owner?.username}</span>
+          <span className="text-ink-soft">{reply.content}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-0.5 text-xs text-ink-soft">
+          <button onClick={handleLike} className={`hover:text-accent ${liked ? 'text-danger' : ''}`}>
+            {liked ? '❤️' : '🤍'} {likeCount}
+          </button>
+          {user && (
+            <button onClick={() => setShowReplyBox((v) => !v)} className="hover:text-accent">
+              Reply
+            </button>
+          )}
+          {(reply.childrenCount > 0 || (children && children.length > 0)) && (
+            <button onClick={handleToggleChildren} className="hover:text-accent">
+              {showChildren ? 'Hide' : `${reply.childrenCount ?? '+'} more`}
+            </button>
+          )}
+        </div>
+        {showReplyBox && (
+          <div className="flex gap-2 mt-1">
+            <input
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleReply() }}
+              placeholder={`Reply to @${reply.owner?.username}…`}
+              className="flex-1 px-3 py-1 rounded-xl border border-border text-xs focus:outline-none focus:ring-2 focus:ring-accent-soft"
+            />
+            <button
+              onClick={handleReply}
+              disabled={posting || !replyText.trim()}
+              className="px-3 py-1 rounded-xl bg-bg-soft text-xs font-semibold text-ink hover:bg-muted disabled:opacity-60"
+            >
+              {posting ? '…' : 'Send'}
+            </button>
+          </div>
+        )}
+        {showChildren && depth < 4 && (
+          <div className="mt-2 pl-3 border-l border-border space-y-2">
+            {children === null && <p className="text-xs text-ink-soft/70">Loading…</p>}
+            {children?.map((c) => (
+              <ReplyItem key={c.id} reply={c} user={user} depth={depth + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 function CommentReplies({ commentId, user }) {
   const [open, setOpen] = useState(false)
   const [replies, setReplies] = useState(null)
@@ -137,15 +238,7 @@ function CommentReplies({ commentId, user }) {
           {replies === null && <p className="text-xs text-ink-soft/70">Loading replies…</p>}
           {replies !== null && replies.length === 0 && <p className="text-xs text-ink-soft/70">No replies yet.</p>}
           {replies?.map((r) => (
-            <div key={r.id} className="flex gap-2 text-sm">
-              <span className="w-6 h-6 rounded-full bg-muted grid place-items-center text-xs shrink-0">
-                {getAvatarEmoji(r.owner?.avatar)}
-              </span>
-              <div>
-                <span className="font-semibold text-ink mr-1.5">@{r.owner?.username}</span>
-                <span className="text-ink-soft">{r.content}</span>
-              </div>
-            </div>
+            <ReplyItem key={r.id} reply={r} user={user} />
           ))}
           {user && (
             <div className="flex gap-2 pt-1">
@@ -238,8 +331,11 @@ export default function ContestDetails() {
   const refBy = searchParams.get('ref')
   const user = useSelector((s) => s.auth.user)
   const [modalOpen, setModalOpen] = useState(false)
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [registered, setRegistered] = useState(false)
+  const [singleContest, setSingleContest] = useState(null)
   const [remoteContests, setRemoteContests] = useState([])
   const [participants, setParticipants] = useState([])
   const [rank, setRank] = useState([])
@@ -260,27 +356,64 @@ export default function ContestDetails() {
   const [myRating, setMyRating] = useState(0)
   const [feedbackText, setFeedbackText] = useState('')
   const [feedbackList, setFeedbackList] = useState([])
+
   useEffect(() => {
+    if (!id) return
+    fetchContestByIdRemote(id).then((res) => {
+      if (res.contest) {
+        setSingleContest(res.contest)
+      }
+    })
     fetchContestsRemoteFirst().then((res) => setRemoteContests(res.contests))
-  }, [])
+  }, [id])
+
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(t)
   }, [])
+
   const allContests = useMemo(() => {
     const local = getAllContests(mockContests)
     const remoteIds = new Set(remoteContests.map((c) => c.id))
     return [...remoteContests, ...local.filter((c) => !remoteIds.has(c.id))]
   }, [remoteContests])
-  const contest = allContests.find((c) => c.id === id) || allContests[0]
+
+  const contest = useMemo(() => {
+    if (singleContest && singleContest.id === id) return singleContest
+    const found = allContests.find((c) => c.id === id)
+    if (found) return found
+    return singleContest || allContests[0] || {}
+  }, [singleContest, allContests, id])
+
   useEffect(() => {
-    if (!contest?.remote) return
+    if (!contest?.id || !contest?.remote) return
     fetchContestParticipantsRemote(contest.id).then((res) => setParticipants(res.participants))
     fetchContestRankRemote(contest.id).then((res) => setRank(res.rank))
     fetchContestProblemsRemote(contest.id).then((res) => setRemoteProblems(res.problems))
   }, [contest?.id, contest?.remote])
-  const alreadyRegistered = user ? isRegistered(contest.id, user.username) || registered : false
-  const isOwner = user && contest.createdBy === user.username
+
+  const currentUserId = user?.id || user?.remoteId
+  const currentUsername = user?.username?.toLowerCase()
+  const contestOwnerId = contest?.ownerId || contest?.owner?.id
+  const contestOwnerName = (contest?.owner?.username || contest?.createdBy || '')?.toLowerCase()
+
+  const isOwner = Boolean(
+    user && (
+      (contestOwnerId && currentUserId && contestOwnerId === currentUserId) ||
+      (contestOwnerName && currentUsername && contestOwnerName === currentUsername)
+    )
+  )
+
+  const alreadyRegistered = useMemo(() => {
+    if (!user) return false
+    const inParticipants = participants.some(
+      (p) =>
+        (p.id && currentUserId && p.id === currentUserId) ||
+        (p.username && currentUsername && p.username.toLowerCase() === currentUsername)
+    )
+    return inParticipants || isRegistered(contest.id, user.username) || registered
+  }, [user, participants, currentUserId, currentUsername, contest.id, registered])
+
   const { startMs, endMs } = useMemo(() => getContestTimes(contest), [contest])
   const status = now < startMs ? 'upcoming' : now < endMs ? 'live' : 'ended'
   // Owners can always preview their own problems; everyone else must join first,
@@ -295,14 +428,22 @@ export default function ContestDetails() {
     } else {
       setComments(getComments('contest', contest.id))
     }
-    setLikeState({
-      count: getLikeCount('contest', contest.id),
-      liked: user ? hasLiked('contest', contest.id, user.username) : false,
-    })
+    if (contest.remote) {
+      // Use server-side like count and per-user liked state from getContestById
+      setLikeState({
+        count: contest.likesCount ?? contest._count?.likes ?? contest._count?.like ?? 0,
+        liked: Boolean(contest.isLikedByMe),
+      })
+    } else {
+      setLikeState({
+        count: getLikeCount('contest', contest.id),
+        liked: user ? hasLiked('contest', contest.id, user.username) : false,
+      })
+    }
     setRatingSummary(getRatingSummary('contest', contest.id))
     setMyRating(user ? getUserRating('contest', contest.id, user.username)?.stars || 0 : 0)
     setFeedbackList(getFeedback('contest', contest.id))
-  }, [contest.id, contest.remote, user])
+  }, [contest.id, contest.remote, contest._count, contest.likesCount, contest.isLikedByMe, user])
   const handleAddComment = async () => {
     if (!user) {
       setModalOpen(true)
@@ -341,12 +482,15 @@ export default function ContestDetails() {
         cs.map((c) => {
           if (c.id !== id) return c
           const mine = user.username.toLowerCase()
+          const newLikeCount = typeof res.count === 'number' ? res.count : Math.max(0, (c.likeCount ?? 0) + (res.isLiked ? 1 : -1))
           const likes = res.isLiked
             ? [...new Set([...(c.likes || []), mine])]
             : (c.likes || []).filter((u) => u !== mine)
           return {
             ...c,
             likes,
+            likeCount: newLikeCount,
+            isLikedByMe: res.isLiked,
           }
         })
       )
@@ -373,11 +517,29 @@ export default function ContestDetails() {
     }
     if (contest.remote) {
       const res = await toggleContestLikeRemote(contest.id)
-      if (!res.error)
-        setLikeState((s) => ({
-          count: s.count + (res.isLiked ? 1 : -1),
+      if (!res.error) {
+        const nextCount = typeof res.count === 'number'
+          ? res.count
+          : Math.max(0, likeState.count + (res.isLiked ? 1 : -1))
+        setLikeState({
+          count: nextCount,
           liked: res.isLiked,
-        }))
+        })
+        setSingleContest((sc) =>
+          sc
+            ? {
+                ...sc,
+                isLikedByMe: res.isLiked,
+                likesCount: nextCount,
+                _count: {
+                  ...sc._count,
+                  likes: nextCount,
+                  like: nextCount,
+                },
+              }
+            : sc
+        )
+      }
       return
     }
     const res = toggleLike('contest', contest.id, user.username)
@@ -417,19 +579,42 @@ export default function ContestDetails() {
       setModalOpen(true)
       return
     }
+    if (contest.remote && contest.isProtected && !isOwner) {
+      setPasswordModalOpen(true)
+      return
+    }
+    await executeJoin()
+  }
+  const executeJoin = async (password) => {
     setBusy(true)
     setActionError('')
     if (contest.remote) {
-      const res = await joinContestRemoteFirst(contest.id)
+      const res = await joinContestRemoteFirst(contest.id, password)
       if (res.error) {
         setActionError(res.error)
         setBusy(false)
-        return
+        return { error: res.error }
       }
+      fetchContestParticipantsRemote(contest.id).then((r) => setParticipants(r.participants))
     }
     const result = registerForContest(contest.id, user.username, refBy)
     setBusy(false)
     if (!result.error) setRegistered(true)
+    return { success: true }
+  }
+  const handleContestUpdated = (updated) => {
+    if (updated) {
+      setSingleContest((prev) => ({ ...prev, ...updated }))
+      setRemoteContests((cs) => cs.map((c) => (c.id === contest.id ? { ...c, ...updated } : c)))
+    }
+    if (id) {
+      fetchContestByIdRemote(id).then((res) => {
+        if (res.contest) setSingleContest(res.contest)
+      })
+    }
+    fetchContestsRemoteFirst().then((res) => setRemoteContests(res.contests))
+    fetchContestProblemsRemote(contest.id).then((res) => setRemoteProblems(res.problems))
+    fetchContestParticipantsRemote(contest.id).then((res) => setParticipants(res.participants))
   }
   const handleLeave = async () => {
     if (!user) return
@@ -508,8 +693,23 @@ export default function ContestDetails() {
         ← Back
       </button>
 
-      <div className={`h-40 md:h-56 rounded-2xl bg-gradient-to-br ${contest.banner} flex items-end p-6 mb-4`}>
-        <h1 className="font-display font-extrabold text-2xl md:text-4xl text-white drop-shadow">{contest.name}</h1>
+      <div className={`h-40 md:h-56 rounded-2xl bg-gradient-to-br ${contest.banner} flex items-end justify-between p-6 mb-4`}>
+        <div>
+          {contest.isProtected && (
+            <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-black/40 text-white backdrop-blur mb-2">
+              🔒 Password Protected
+            </span>
+          )}
+          <h1 className="font-display font-extrabold text-2xl md:text-4xl text-white drop-shadow">{contest.name}</h1>
+        </div>
+        {isOwner && (
+          <button
+            onClick={() => setEditModalOpen(true)}
+            className="shrink-0 px-4 py-2 rounded-xl bg-white text-ink text-xs md:text-sm font-bold hover:bg-white/90 shadow transition-all flex items-center gap-1.5"
+          >
+            ⚙️ Edit Contest
+          </button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2.5 mb-8">
@@ -525,6 +725,11 @@ export default function ContestDetails() {
         >
           {alreadyRegistered ? "✓ You're registered" : 'Not registered yet'}
         </span>
+        {isOwner && (
+          <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-accent/15 text-accent">
+            👑 Contest Host
+          </span>
+        )}
       </div>
 
       {refBy && !alreadyRegistered && (
@@ -712,8 +917,8 @@ export default function ContestDetails() {
                     </div>
                     <p className="text-sm text-ink mt-0.5">{c.text}</p>
                     <div className="flex items-center gap-3 mt-1 text-xs text-ink-soft">
-                      <button onClick={() => handleToggleCommentLike(c.id)} className="hover:text-accent">
-                        {(c.likes || []).includes(user?.username?.toLowerCase()) ? '❤️' : '🤍'} {(c.likes || []).length}
+                      <button onClick={() => handleToggleCommentLike(c.id)} className={`hover:text-accent ${c.isLikedByMe ? 'text-danger' : ''}`}>
+                        {c.isLikedByMe ? '❤️' : '🤍'} {c.likeCount ?? (c.likes || []).length}
                       </button>
                       {user && c.username === user.username.toLowerCase() && (
                         <button onClick={() => handleDeleteComment(c.id)} className="hover:text-danger">
@@ -757,9 +962,6 @@ export default function ContestDetails() {
             </div>
           </section>
 
-          <section>
-            <CommunityFeed showHeading />
-          </section>
         </div>
 
         <aside className="space-y-4">
@@ -844,45 +1046,27 @@ export default function ContestDetails() {
             </button>
 
             {isOwner && (
-              <div className="space-y-2">
-                {contest.remote && (
-                  <div className="flex gap-2 text-xs">
-                    <button
-                      onClick={handleEditDetails}
-                      className="flex-1 py-2 rounded-2xl border border-border text-ink-soft hover:bg-white"
-                    >
-                      Edit details
-                    </button>
-                    <button
-                      onClick={handleReschedule}
-                      className="flex-1 py-2 rounded-2xl border border-border text-ink-soft hover:bg-white"
-                    >
-                      Reschedule
-                    </button>
-                    {contest.isProtected && (
-                      <button
-                        onClick={handleChangeContestPassword}
-                        className="flex-1 py-2 rounded-2xl border border-border text-ink-soft hover:bg-white"
-                      >
-                        Change password
-                      </button>
-                    )}
-                  </div>
-                )}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <button
+                  onClick={() => setEditModalOpen(true)}
+                  className="w-full py-2.5 rounded-2xl bg-accent text-white font-semibold text-xs hover:bg-accent-hover shadow-soft flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  ⚙️ Manage Contest / Edit Details
+                </button>
                 <div className="flex gap-2">
                   {contest.remote && !contest.isCancelled && (
                     <button
                       onClick={handleCancel}
-                      className="flex-1 py-2 rounded-2xl text-xs text-warning hover:underline"
+                      className="flex-1 py-1.5 rounded-xl text-xs text-warning hover:underline"
                     >
                       Cancel contest
                     </button>
                   )}
                   <button
                     onClick={handleDelete}
-                    className="flex-1 py-2 rounded-2xl text-xs text-danger hover:underline"
+                    className="flex-1 py-1.5 rounded-xl text-xs text-danger hover:underline"
                   >
-                    Delete this contest
+                    Delete contest
                   </button>
                 </div>
               </div>
@@ -965,6 +1149,22 @@ export default function ContestDetails() {
       </div>
 
       <LoginRequiredModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <ContestPasswordModal
+        open={passwordModalOpen}
+        onClose={() => setPasswordModalOpen(false)}
+        contestTitle={contest?.name}
+        onConfirm={executeJoin}
+      />
+      {isOwner && (
+        <EditContestModal
+          open={editModalOpen}
+          onClose={() => setEditModalOpen(false)}
+          contest={contest}
+          problems={remoteProblems}
+          onUpdated={handleContestUpdated}
+          onDeleted={() => navigate('/contests')}
+        />
+      )}
     </div>
   )
 }

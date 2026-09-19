@@ -109,7 +109,8 @@ function upsertLocalFromRemote(remoteUser) {
     github: remoteUser.git || existing?.github || '',
     email: remoteUser.email || existing?.email,
     phone: remoteUser.phone || existing?.phone,
-    remoteId: remoteUser.id || existing?.remoteId,
+    id: remoteUser.id || existing?.id || remoteUser.remoteId || existing?.remoteId,
+    remoteId: remoteUser.id || existing?.remoteId || remoteUser.id,
     createdAt: remoteUser.createdAt || existing?.createdAt || new Date().toISOString(),
   }
   writeUsers(users)
@@ -202,7 +203,8 @@ export async function registerUserRemoteFirst(form) {
       git: form.github,
       phone: form.phone?.trim() || null
     })
-    if(!res?.data?.user) {
+    console.log(res.data)
+    if(!res?.data) {
       return {
         error: 'Registration failed. Please try again.',
       }

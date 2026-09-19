@@ -10,9 +10,10 @@ export function getSocket() {
     reconnectionDelay: 1500,
     withCredentials: true,
     timeout: 4000,
-    auth: {
-      token: getAccessToken() || undefined,
-    },
+    // auth: {
+    //   token: getAccessToken() || undefined,
+    // },
+    auth: (cb) => cb({ token: getAccessToken() || undefined }),
   })
   return socket
 }

@@ -88,6 +88,7 @@ export async function toggleContestLikeRemote(contestId) {
     const res = await likeApi.toggleContest(contestId)
     return {
       isLiked: res?.data?.isLiked,
+      count: res?.data?.count,
       success: true,
     }
   } catch (err) {
